@@ -8,7 +8,8 @@ import numpy as np
 # Your Flatbuffer imports here
 
 from CS598 import Column, ColumnMetadata, DataType
-from CS598.Dataframe import Dataframe
+from CS598 import Dataframe
+import CS598
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     builder = flatbuffers.Builder(1024)
@@ -71,17 +72,14 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
             Column.ColumnAddDtype(builder, Column.DataType.String)
             Column.ColumnAddStringData(builder, string_data_offset)
             column_offsets.append(Column.ColumnEnd(builder))
-
-    Column.DataframeStartColumnsVector(builder, len(column_offsets))
-    for offset in reversed(column_offsets):
-        builder.PrependUOffsetTRelative(offset)
+    # Your code here
     columns_offset = builder.EndVector()
 
     # Step 3: Serialize the Dataframe
-    Dataframe.DataframeStart(builder)
-    Dataframe.DataframeAddMetadata(builder, metadata_offset)
-    Dataframe.DataframeAddColumns(builder, columns_offset)
-    fb_dataframe = Dataframe.DataframeEnd(builder)
+    CS598.Dataframe.DataframeStart(builder)
+    CS598.Dataframe.DataframeAddMetadata(builder, metadata_offset)
+    CS598.Dataframe.DataframeAddColumns(builder, columns_offset)
+    fb_dataframe = CS598.Dataframe.DataframeEnd(builder)
 
     builder.Finish(fb_dataframe)
     return builder.Output()
