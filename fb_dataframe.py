@@ -33,11 +33,11 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_dtype in zip(df.columns, df.dtypes):
         dtype = None
         if col_dtype == 'int64':
-            dtype = DataType.Int64
+            dtype = Dataframe.DataType.Int64
         elif col_dtype == 'float64':
-            dtype = DataType.Float
+            dtype = Dataframe.DataType.Float
         elif col_dtype == 'object':
-            dtype = DataType.String
+            dtype = Dataframe.DataType.String
 
         if dtype is not None:
             col_metadata = ColumnMetadata.CreateColumnMetadata(builder, builder.CreateString(col_name), dtype)
@@ -48,26 +48,26 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_data in df.iteritems():
         dtype = None
         if col_data.dtype == 'int64':
-            dtype = DataType.Int64
+            dtype = Dataframe.DataType.Int64
             col_data = col_data.astype(int)
             col_data = col_data.values.tolist()
         elif col_data.dtype == 'float64':
-            dtype = DataType.Float
+            dtype = Dataframe.DataType.Float
             col_data = col_data.astype(float)
             col_data = col_data.values.tolist()
         elif col_data.dtype == 'object':
-            dtype = DataType.String
+            dtype = Dataframe.DataType.String
             col_data = col_data.astype(str)
             col_data = [builder.CreateString(val) for val in col_data.values.tolist()]
 
         if dtype is not None:
-            if dtype == DataType.Int64:
+            if dtype == Dataframe.DataType.Int64:
                 Column.ColumnStartInt64DataVector(builder, len(col_data))
                 for val in reversed(col_data):
                     builder.PrependInt64(val)
                 int64_data = builder.EndVector(len(col_data))
                 Column.ColumnAddInt64Data(builder, int64_data)
-            elif dtype == DataType.Float:
+            elif dtype == Dataframe.DataType.Float:
                 Column.ColumnStartFloatDataVector(builder, len(col_data))
                 for val in reversed(col_data):
                     builder.PrependFloat64(val)
