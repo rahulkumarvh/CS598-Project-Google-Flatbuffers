@@ -6,81 +6,74 @@ import types
 import numpy as np
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-import CS598.DataFrame
-import CS598.FloatColumn
-import CS598.IntColumn
-import CS598.StringColumn
+from Dataframe_generated import Dataframe, ColumnMetadata, DataType, Column
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
-    # Initialize the Flatbuffer builder
-    builder = flatbuffers.Builder(0)
+  """
+  Converts a Pandas DataFrame to a Flatbuffer. Returns the bytearray of the Flatbuffer.
 
-    # Create a list to hold the column offsets
-    column_offsets = []
+  @param df: the dataframe.
+  """
+  builder = flatbuffers.Builder()
 
-    # Iterate over the columns in the DataFrame
-    for column_name, series in df.items():
-        # Create the column name
-        name_offset = builder.CreateString(column_name)
+  # Create ColumnMetadata for each column
+  column_metadata = []
+  for col_name, col_data in df.items():
+    # Determine data type
+    data_type = DataType.String if pd.api.types.is_string_dtype(col_data) else (
+        DataType.Float if pd.api.types.is_numeric_dtype(col_data) else DataType.Int64
+    )
+    column_metadata.append(ColumnMetadata.CreateColumnMetadata(builder, col_name, data_type))
 
-        # Create a list to hold the value offsets
-        value_offsets = []
+  # Create Column data based on data type
+  columns = []
+  for i, col_name in enumerate(df.columns):
+    col_data = df.iloc[:, i]
+    column = None
+    if pd.api.types.is_int64_dtype(col_data):
+      column = Column.CreateColumn(builder, dtype=DataType.Int64, int64_data=col_data.tolist())
+    elif pd.api.types.is_float_dtype(col_data):
+      column = Column.CreateColumn(builder, dtype=DataType.Float, float_data=col_data.tolist())
+    else:
+      column = Column.CreateColumn(builder, dtype=DataType.String, string_data=[str(val) for val in col_data.tolist()])
+    columns.append(column)
 
-        # Iterate over the values in the series
-        for value in series:
-            # Create the value based on its type
-            if pd.api.types.is_string_dtype(series):
-                value_offset = CS598.StringValue.CreateStringValue(builder, builder.CreateString(value))
-            elif pd.api.types.is_integer_dtype(series):
-                value_offset = CS598.IntValue.CreateIntValue(builder, value)
-            elif pd.api.types.is_float_dtype(series):
-                value_offset = CS598.FloatValue.CreateFloatValue(builder, value)
+  # Create Dataframe object
+  dataframe = Dataframe.CreateDataframe(builder,
+                                         metadata=builder.CreateVector(column_metadata),
+                                         columns=builder.CreateVector(columns))
+  
+  return builder.Output()
 
-            # Add the value offset to the list
-            value_offsets.append(value_offset)
-
-        # Create the values vector
-        CS598.ColumnStartValuesVector(builder, len(value_offsets))
-        for value_offset in reversed(value_offsets):
-            builder.PrependUOffsetTRelative(value_offset)
-        values_offset = builder.EndVector(len(value_offsets))
-
-        # Create the column
-        CS598.ColumnStart(builder)
-        CS598.ColumnAddName(builder, name_offset)
-        CS598.ColumnAddValues(builder, values_offset)
-        column_offset = CS598.ColumnEnd(builder)
-
-        # Add the column offset to the list
-        column_offsets.append(column_offset)
-
-    # Create the columns vector
-    CS598.DataFrameStartColumnsVector(builder, len(column_offsets))
-    for column_offset in reversed(column_offsets):
-        builder.PrependUOffsetTRelative(column_offset)
-    columns_offset = builder.EndVector(len(column_offsets))
-
-    # Create the DataFrame
-    CS598.DataFrameStart(builder)
-    CS598.DataFrameAddColumns(builder, columns_offset)
-    dataframe_offset = CS598.DataFrameEnd(builder)
-
-    # Finish the Flatbuffer
-    builder.Finish(dataframe_offset)
-
-    # Return the bytearray of the Flatbuffer
-    return builder.Output()
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
-    """
-        Returns the first n rows of the Flatbuffer Dataframe as a Pandas Dataframe
-        similar to df.head(). If there are less than n rows, return the entire Dataframe.
-        Hint: don't forget the column names!
+  """
+  Returns the first n rows of the Flatbuffer Dataframe as a Pandas Dataframe
+  similar to df.head(). If there are less than n rows, return the entire Dataframe.
 
-        @param fb_bytes: bytes of the Flatbuffer Dataframe.
-        @param rows: number of rows to return.
-    """
-    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+  @param fb_bytes: bytes of the Flatbuffer Dataframe.
+  @param rows: number of rows to return.
+  """
+  df = Dataframe.GetRootAsDataframe(fb_bytes)
+  num_rows = min(rows, df.columns().__len__())
+
+  # Get column names and data types
+  column_names = [m.name() for m in df.metadata()]
+  column_data = []
+  for i in range(num_rows):
+    row = []
+    for col_index in range(df.columns().__len__()):
+      col = df.columns()[col_index]
+      if col.dtype() == DataType.Int64:
+        row.append(col.int64_data()[i])
+      elif col.dtype() == DataType.Float:
+        row.append(col.float_data()[i])
+      else:
+        row.append(col.string_data()[i])
+    column_data.append(row)
+
+  return pd.DataFrame(data=column_data, columns=column_names)
+  # REPLACE THIS WITH YOUR CODE...
 
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:

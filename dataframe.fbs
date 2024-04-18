@@ -1,36 +1,26 @@
-namespace MyGame;
+namespace Dataframe;
+
+enum DataType: byte {
+  Int64 = 0,
+  Float = 1,
+  String = 2
+}
+
+table ColumnMetadata {
+  name: string;  // Name of the column
+  dtype: DataType;  // Data type of the column
+}
+
+table Dataframe {
+  metadata: [ColumnMetadata]; // Metadata for all columns
+  columns: [Column]; // Columns data
+}
 
 table Column {
-  // Name of the column
-  name: string;
-  // Data type of the column (int64, float64, string)
-  data_type: MyGame.DataType;
-  // Vector of actual column values (int64, float64, or string based on data_type)
-  data: (MyGame.IntVector | MyGame.FloatVector | MyGame.[StringVector]);
+  dtype: DataType;
+  int64_data: [int64];
+  float_data: [float];
+  string_data: [string];
 }
 
-enum DataType {
-  INT64,
-  FLOAT64,
-  STRING,
-}
-
-table DataFrame {
-  // Number of rows in the dataframe
-  rows: int32;
-  // List of columns in the dataframe
-  columns: [Column];
-}
-
-// Helper vector types for int64, float64, and string data
-struct IntVector {
-  data: [int64];
-}
-
-struct FloatVector {
-  data: [float64];
-}
-
-struct StringVector {
-  data: [offset: uoffset, string];
-}
+root_type Dataframe;
