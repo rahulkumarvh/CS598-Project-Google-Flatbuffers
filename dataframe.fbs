@@ -1,26 +1,25 @@
-namespace Dataframe;
+namespace CS598;
 
-enum DataType: byte {
-  Int64 = 0,
-  Float = 1,
-  String = 2
+table IntColumn {
+  name:string;
+  values:[int];
 }
 
-table ColumnMetadata {
-  name: string;  // Name of the column
-  dtype: DataType;  // Data type of the column
+table FloatColumn {
+  name:string;
+  values:[float];
 }
 
-table Dataframe {
-  metadata: [ColumnMetadata]; // Metadata for all columns
-  columns: [Column]; // Columns data
+table StringColumn {
+  name:string;
+  values:[string];
 }
 
-table Column {
-  dtype: DataType;
-  int64_data: [int64];
-  float_data: [float];
-  string_data: [string];
+// Define a table for a DataFrame
+table DataFrame {
+  int_columns:[IntColumn];
+  float_columns:[FloatColumn];
+  string_columns:[StringColumn];
 }
 
-root_type Dataframe;
+root_type DataFrame;

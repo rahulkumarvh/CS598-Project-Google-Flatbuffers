@@ -25,47 +25,121 @@ class DataFrame(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
     # DataFrame
-    def Columns(self, j):
+    def IntColumns(self, j):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = self._tab.Vector(o)
             x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
             x = self._tab.Indirect(x)
-            from CS598.Column import Column
-            obj = Column()
+            from CS598.IntColumn import IntColumn
+            obj = IntColumn()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
 
     # DataFrame
-    def ColumnsLength(self):
+    def IntColumnsLength(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # DataFrame
-    def ColumnsIsNone(self):
+    def IntColumnsIsNone(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
+    # DataFrame
+    def FloatColumns(self, j):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            x = self._tab.Vector(o)
+            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+            x = self._tab.Indirect(x)
+            from CS598.FloatColumn import FloatColumn
+            obj = FloatColumn()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # DataFrame
+    def FloatColumnsLength(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            return self._tab.VectorLen(o)
+        return 0
+
+    # DataFrame
+    def FloatColumnsIsNone(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        return o == 0
+
+    # DataFrame
+    def StringColumns(self, j):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            x = self._tab.Vector(o)
+            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
+            x = self._tab.Indirect(x)
+            from CS598.StringColumn import StringColumn
+            obj = StringColumn()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # DataFrame
+    def StringColumnsLength(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return self._tab.VectorLen(o)
+        return 0
+
+    # DataFrame
+    def StringColumnsIsNone(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        return o == 0
+
 def DataFrameStart(builder):
-    builder.StartObject(1)
+    builder.StartObject(3)
 
 def Start(builder):
     DataFrameStart(builder)
 
-def DataFrameAddColumns(builder, columns):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(columns), 0)
+def DataFrameAddIntColumns(builder, intColumns):
+    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(intColumns), 0)
 
-def AddColumns(builder, columns):
-    DataFrameAddColumns(builder, columns)
+def AddIntColumns(builder, intColumns):
+    DataFrameAddIntColumns(builder, intColumns)
 
-def DataFrameStartColumnsVector(builder, numElems):
+def DataFrameStartIntColumnsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
 
-def StartColumnsVector(builder, numElems):
-    return DataFrameStartColumnsVector(builder, numElems)
+def StartIntColumnsVector(builder, numElems):
+    return DataFrameStartIntColumnsVector(builder, numElems)
+
+def DataFrameAddFloatColumns(builder, floatColumns):
+    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(floatColumns), 0)
+
+def AddFloatColumns(builder, floatColumns):
+    DataFrameAddFloatColumns(builder, floatColumns)
+
+def DataFrameStartFloatColumnsVector(builder, numElems):
+    return builder.StartVector(4, numElems, 4)
+
+def StartFloatColumnsVector(builder, numElems):
+    return DataFrameStartFloatColumnsVector(builder, numElems)
+
+def DataFrameAddStringColumns(builder, stringColumns):
+    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(stringColumns), 0)
+
+def AddStringColumns(builder, stringColumns):
+    DataFrameAddStringColumns(builder, stringColumns)
+
+def DataFrameStartStringColumnsVector(builder, numElems):
+    return builder.StartVector(4, numElems, 4)
+
+def StartStringColumnsVector(builder, numElems):
+    return DataFrameStartStringColumnsVector(builder, numElems)
 
 def DataFrameEnd(builder):
     return builder.EndObject()

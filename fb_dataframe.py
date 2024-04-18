@@ -10,149 +10,102 @@ import CS598.DataFrame as df_fb
 
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-import CS598.DataFrame as DataFrame
-import CS598.Column as Column
+import CS598
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
-    """
-        Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
+    # Initialize the Flatbuffer builder
+    builder = flatbuffers.Builder(0)
 
-        The flatbuffer should follow a columnar format as follows:
-        +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
-        | DF metadata | col 1 metadata | val 1 | val 2 | ... | col 2 metadata | val 1 | val 2 | ... |
-        +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
-        You are free to put any bookkeeping items in the metadata. however, for autograding purposes:
-        1. Make sure that the values in the columns are laid out in the flatbuffer as specified above
-        2. Serialize int and float values using flatbuffer's 'PrependInt64' and 'PrependFloat64'
-            functions, respectively (i.e., don't convert them to strings yourself - you will lose
-            precision for floats).
+    # Create a list to hold the column offsets
+    column_offsets = []
 
-        @param df: the dataframe.
-    """
-    builder = flatbuffers.Builder(1024)
-    
-    # Start building the Flatbuffer
-    col_offsets = []
-    for col_name, col_data in df.items():
-        col_type = col_data.dtype
-        if col_type == 'int64':
-            # Rest of the code...
-            col_offsets.append(builder.EndCol())
-        elif col_type == 'float64':
-            # Add float64 column data
-            df_fb.DataFrame.StartFloatdataVector(builder, len(col_data))
-            for val in col_data:
-                builder.PrependFloat64(val)
-            floatdata = builder.EndVector(len(col_data))
-            df_fb.DataFrame.StartCol(builder)
-            df_fb.DataFrame.AddName(builder, builder.CreateString(col_name))
-            df_fb.DataFrame.AddType(builder, df_fb.DataType.Float)
-            df_fb.DataFrame.AddData(builder, floatdata)
-            col_offsets.append(builder.EndCol())
-        elif col_type == 'object':
-            # Add object (string) column data
-            string_offsets = [builder.CreateString(str(val)) for val in col_data]
-            df_fb.DataFrame.StartStringdataVector(builder, len(string_offsets))
-            for string_offset in reversed(string_offsets):
-                builder.PrependUOffsetTRelative(string_offset)
-            stringdata = builder.EndVector(len(string_offsets))
-            df_fb.DataFrame.StartCol(builder)
-            df_fb.DataFrame.AddName(builder, builder.CreateString(col_name))
-            df_fb.DataFrame.AddType(builder, df_fb.DataType.String)
-            df_fb.DataFrame.AddData(builder, stringdata)
-            col_offsets.append(builder.EndCol())
+    # Iterate over the columns in the DataFrame
+    for column_name, series in df.iteritems():
+        # Create the column name
+        name_offset = builder.CreateString(column_name)
 
-    # Add column metadata
-    df_fb.DataFrame.StartColsVector(builder, len(col_offsets))
-    for col_offset in reversed(col_offsets):
-        builder.PrependUOffsetTRelative(col_offset)
-    cols = builder.EndVector(len(col_offsets))
+        # Create a list to hold the value offsets
+        value_offsets = []
 
-    # Add dataframe metadata
-    df_fb.DataFrame.Start(builder)
-    df_fb.DataFrame.AddCols(builder, cols)
-    fb_df = df_fb.DataFrame.End(builder)
+        # Iterate over the values in the series
+        for value in series:
+            # Create the value based on its type
+            if pd.api.types.is_string_dtype(series):
+                value_offset = CS598.StringValue.CreateStringValue(builder, builder.CreateString(value))
+            elif pd.api.types.is_integer_dtype(series):
+                value_offset = CS598.IntValue.CreateIntValue(builder, value)
+            elif pd.api.types.is_float_dtype(series):
+                value_offset = CS598.FloatValue.CreateFloatValue(builder, value)
 
-    builder.Finish(fb_df)
+            # Add the value offset to the list
+            value_offsets.append(value_offset)
+
+        # Create the values vector
+        CS598.ColumnStartValuesVector(builder, len(value_offsets))
+        for value_offset in reversed(value_offsets):
+            builder.PrependUOffsetTRelative(value_offset)
+        values_offset = builder.EndVector(len(value_offsets))
+
+        # Create the column
+        CS598.ColumnStart(builder)
+        CS598.ColumnAddName(builder, name_offset)
+        CS598.ColumnAddValues(builder, values_offset)
+        column_offset = CS598.ColumnEnd(builder)
+
+        # Add the column offset to the list
+        column_offsets.append(column_offset)
+
+    # Create the columns vector
+    CS598.DataFrameStartColumnsVector(builder, len(column_offsets))
+    for column_offset in reversed(column_offsets):
+        builder.PrependUOffsetTRelative(column_offset)
+    columns_offset = builder.EndVector(len(column_offsets))
+
+    # Create the DataFrame
+    CS598.DataFrameStart(builder)
+    CS598.DataFrameAddColumns(builder, columns_offset)
+    dataframe_offset = CS598.DataFrameEnd(builder)
+
+    # Finish the Flatbuffer
+    builder.Finish(dataframe_offset)
+
+    # Return the bytearray of the Flatbuffer
     return builder.Output()
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
-    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
-    columns = []
-    for i in range(df.ColumnsLength()):
-        column = df.Columns(i)
-        column_name = column.Name().decode('utf-8')
-        data_type = column.DataType()
-        if data_type == 0:  # int64
-            column_data = column.IntDataAsNumpy()[:rows]
-        elif data_type == 1:  # float64
-            column_data = column.FloatDataAsNumpy()[:rows]
-        else:  # string
-            column_data = [column.StringData(j).decode('utf-8') for j in range(column.StringDataLength())][:rows]
-        columns.append(pd.Series(column_data, name=column_name))
+    """
+        Returns the first n rows of the Flatbuffer Dataframe as a Pandas Dataframe
+        similar to df.head(). If there are less than n rows, return the entire Dataframe.
+        Hint: don't forget the column names!
 
-    return pd.DataFrame({column.name: column for column in columns})
+        @param fb_bytes: bytes of the Flatbuffer Dataframe.
+        @param rows: number of rows to return.
+    """
+    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
-    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
-    group_col_idx = None
-    sum_col_idx = None
-    column_names = []
-    column_data = []
+    """
+        Applies GROUP BY SUM operation on the flatbuffer dataframe grouping by grouping_col_name
+        and summing sum_col_name. Returns the aggregate result as a Pandas dataframe.
 
-    for i in range(df.ColumnsLength()):
-        column = df.Columns(i)
-        column_name = column.Name().decode('utf-8')
-        column_names.append(column_name)
-        data_type = column.DataType()
-        if column_name == grouping_col_name:
-            group_col_idx = i
-            if data_type == 0:  # int64
-                column_data.append(list(column.IntDataAsNumpy()))
-            elif data_type == 1:  # float64
-                column_data.append(list(column.FloatDataAsNumpy()))
-            else:  # string
-                column_data.append([column.StringData(j).decode('utf-8') for j in range(column.StringDataLength())])
-        elif column_name == sum_col_name:
-            sum_col_idx = i
-            if data_type == 0:  # int64
-                column_data.append(list(column.IntDataAsNumpy()))
-            elif data_type == 1:  # float64
-                column_data.append(list(column.FloatDataAsNumpy()))
-            else:  # string
-                column_data.append([column.StringData(j).decode('utf-8') for j in range(column.StringDataLength())])
+        @param fb_bytes: bytes of the Flatbuffer Dataframe.
+        @param grouping_col_name: column to group by.
+        @param sum_col_name: column to sum.
+    """
+    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
 
-    if group_col_idx is None or sum_col_idx is None:
-        return pd.DataFrame()
-
-    result_df = pd.DataFrame({column_names[i]: column_data[i] for i in range(len(column_names))})
-    grouped = result_df.groupby(column_names[group_col_idx])
-    agg_result = grouped[column_names[sum_col_idx]].sum()
-
-    return agg_result
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
-    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_buf, 0)
-    map_col_idx = None
+    """
+        Apply map_func to elements in a numeric column in the Flatbuffer Dataframe in place.
+        This function shouldn't do anything if col_name doesn't exist or the specified
+        column is a string column.
 
-    for i in range(df.ColumnsLength()):
-        column = df.Columns(i)
-        column_name = column.Name().decode('utf-8')
-        if column_name == col_name:
-            map_col_idx = i
-            data_type = column.DataType()
-            if data_type == 0:  # int64
-                data_start = column.IntDataAsNumpy().ctypes.data
-                for j in range(len(column.IntDataAsNumpy())):
-                    value = struct.unpack('<q', fb_buf[data_start:data_start+8])[0]
-                    new_value = map_func(value)
-                    fb_buf[data_start:data_start+8] = struct.pack('<q', new_value)
-                    data_start += 8
-            elif data_type == 1:  # float64
-                data_start = column.FloatDataAsNumpy().ctypes.data
-                for j in range(len(column.FloatDataAsNumpy())):
-                    value = struct.unpack('<d', fb_buf[data_start:data_start+8])[0]
-                    new_value = map_func(value)
-                    fb_buf[data_start:data_start+8] = struct.pack('<d', new_value)
-                    data_start += 8
-            break
+        @param fb_buf: buffer containing bytes of the Flatbuffer Dataframe.
+        @param col_name: name of the numeric column to apply map_func to.
+        @param map_func: function to apply to elements in the numeric column.
+    """
+    # YOUR CODE HERE...
+    pass
+    
