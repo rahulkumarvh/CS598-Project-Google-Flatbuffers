@@ -6,7 +6,12 @@ import types
 import numpy as np
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-from Dataframe import Dataframe, ColumnMetadata, DataType, Column
+from Dataframe_generated import (  # Assuming this is the generated filename
+    Dataframe as RootTable,  # Update with the actual class name for Dataframe
+    ColumnMetadata,
+    DataType,
+    Column,
+)
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
   """
@@ -20,9 +25,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
   column_metadata = []
   columns = []
   for col_name, col_data in df.items():
-    data_type = DataType.String if pd.api.types.is_string_dtype(col_data) else (
-        DataType.Float if pd.api.types.is_numeric_dtype(col_data) else DataType.Int64
-    )
+    data_type = DataType.String if pd.api.types.is_string_dtype(col_data) else DataType.Int64
     column_metadata.append(ColumnMetadata.CreateColumnMetadata(builder, col_name, data_type))
 
     if data_type == DataType.Int64:
@@ -33,7 +36,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
       columns.append(Column.CreateColumn(builder, dtype=data_type, string_data=[str(val) for val in col_data.tolist()]))
 
   # Create Dataframe object
-  dataframe = Dataframe.CreateDataframe(builder, metadata=builder.CreateVector(column_metadata), columns=builder.CreateVector(columns))
+  dataframe = RootTable.CreateDataframe(builder, metadata=builder.CreateVector(column_metadata), columns=builder.CreateVector(columns))
 
   return builder.Output()
 
@@ -46,7 +49,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
   @param fb_bytes: bytes of the Flatbuffer Dataframe.
   @param rows: number of rows to return.
   """
-  df = Dataframe.GetRootAsDataframe(fb_bytes)
+  df = RootTable.GetRootAsDataframe(fb_bytes)  # Update with the actual class name
   num_rows = min(rows, df.rows())
 
   # Get column names and data
