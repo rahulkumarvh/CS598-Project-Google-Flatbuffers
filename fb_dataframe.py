@@ -19,19 +19,19 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_dtype in zip(df.columns, df.dtypes):
         dtype = None
         if col_dtype == 'int64':
-            dtype = DataFrame.DataType.Int64
+            dtype = DataType.Int64
         elif col_dtype == 'float64':
-            dtype = DataFrame.DataType.Float
+            dtype = DataType.Float
         elif col_dtype == 'object':
-            dtype = DataFrame.DataType.String
+            dtype = DataType.String
 
         name_offset = builder.CreateString(col_name)
-        DataFrame.ColumnMetadataStart(builder)
-        DataFrame.ColumnMetadataAddName(builder, name_offset)
-        DataFrame.ColumnMetadataAddDtype(builder, dtype)
-        col_metadata_offsets.append(DataFrame.ColumnMetadataEnd(builder))
+        ColumnMetadata.ColumnMetadataStart(builder)
+        ColumnMetadata.ColumnMetadataAddName(builder, name_offset)
+        ColumnMetadata.ColumnMetadataAddDtype(builder, dtype)
+        col_metadata_offsets.append(ColumnMetadata.ColumnMetadataEnd(builder))
 
-    DataFrame.DataframeStartMetadataVector(builder, len(col_metadata_offsets))
+    ColumnMetadata.DataframeStartMetadataVector(builder, len(col_metadata_offsets))
     for offset in reversed(col_metadata_offsets):
         builder.PrependUOffsetTRelative(offset)
     metadata_offset = builder.EndVector()
@@ -45,44 +45,44 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
 
         # Convert data to appropriate FlatBuffer vector type
         if col_dtype == 'int64':
-            DataFrame.ColumnStartInt64DataVector(builder, len(col_data))
+            Column.ColumnStartInt64DataVector(builder, len(col_data))
             for val in reversed(col_data):
                 builder.PrependInt64(val)
             int64_data_offset = builder.EndVector()
-            DataFrame.ColumnStart(builder)
-            DataFrame.ColumnAddDtype(builder, DataFrame.DataType.Int64)
-            DataFrame.ColumnAddInt64Data(builder, int64_data_offset)
-            column_offsets.append(DataFrame.ColumnEnd(builder))
+            Column.ColumnStart(builder)
+            Column.ColumnAddDtype(builder, DataType.Int64)
+            Column.ColumnAddInt64Data(builder, int64_data_offset)
+            column_offsets.append(Column.ColumnEnd(builder))
         elif col_dtype == 'float64':
-            DataFrame.ColumnStartFloatDataVector(builder, len(col_data))
+            Column.ColumnStartFloatDataVector(builder, len(col_data))
             for val in reversed(col_data):
                 builder.PrependFloat64(val)
             float_data_offset = builder.EndVector()
-            DataFrame.ColumnStart(builder)
-            DataFrame.ColumnAddDtype(builder, DataFrame.DataType.Float)
-            DataFrame.ColumnAddFloatData(builder, float_data_offset)
-            column_offsets.append(DataFrame.ColumnEnd(builder))
+            Column.ColumnStart(builder)
+            Column.ColumnAddDtype(builder, DataType.Float)
+            Column.ColumnAddFloatData(builder, float_data_offset)
+            column_offsets.append(Column.ColumnEnd(builder))
         elif col_dtype == 'object':
             string_data_offsets = [builder.CreateString(str(val)) for val in reversed(col_data)]
-            DataFrame.ColumnStartStringDataVector(builder, len(string_data_offsets))
+            Column.ColumnStartStringDataVector(builder, len(string_data_offsets))
             for offset in string_data_offsets:
                 builder.PrependUOffsetTRelative(offset)
             string_data_offset = builder.EndVector()
-            DataFrame.ColumnStart(builder)
-            DataFrame.ColumnAddDtype(builder, DataFrame.DataType.String)
-            DataFrame.ColumnAddStringData(builder, string_data_offset)
-            column_offsets.append(DataFrame.ColumnEnd(builder))
+            Column.ColumnStart(builder)
+            Column.ColumnAddDtype(builder, Column.DataType.String)
+            Column.ColumnAddStringData(builder, string_data_offset)
+            column_offsets.append(Column.ColumnEnd(builder))
 
-    DataFrame.DataframeStartColumnsVector(builder, len(column_offsets))
+    Column.DataframeStartColumnsVector(builder, len(column_offsets))
     for offset in reversed(column_offsets):
         builder.PrependUOffsetTRelative(offset)
     columns_offset = builder.EndVector()
 
     # Step 3: Serialize the Dataframe
-    DataFrame.DataframeStart(builder)
-    DataFrame.DataframeAddMetadata(builder, metadata_offset)
-    DataFrame.DataframeAddColumns(builder, columns_offset)
-    fb_dataframe = DataFrame.DataframeEnd(builder)
+    Dataframe.DataframeStart(builder)
+    Dataframe.DataframeAddMetadata(builder, metadata_offset)
+    Dataframe.DataframeAddColumns(builder, columns_offset)
+    fb_dataframe = Dataframe.DataframeEnd(builder)
 
     builder.Finish(fb_dataframe)
     return builder.Output()
