@@ -1,111 +1,143 @@
-import flatbuffers
 import pandas as pd
-import struct
-import time
-import types
-import numpy as np
-
-# Your Flatbuffer imports here
-
-from CS598 import Column, ColumnMetadata, DataType, Dataframe
+from typing import Callable, Any
+import flatbuffers
+from CS598 import Dataframe, Column, ColumnMetadata, DataType
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
-    builder = flatbuffers.Builder(1024)
+    """
+    Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
 
-    # Step 1: Serialize metadata for each column
-    col_metadata_offsets = []
-    for col_name, col_dtype in zip(df.columns, df.dtypes):
-        dtype = None
+    The flatbuffer follows a columnar format as follows:
+    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
+    | DF metadata | col 1 metadata | val 1 | val 2 | ... | col 2 metadata | val 1 | val 2 | ... |
+    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
+    """
+    builder = flatbuffers.Builder(0)
+
+    # Create column metadata
+    column_metadata = []
+    for col_name, col_dtype in df.dtypes.iteritems():
+        name = builder.CreateString(col_name)
         if col_dtype == 'int64':
             dtype = DataType.Int64
         elif col_dtype == 'float64':
             dtype = DataType.Float
-        elif col_dtype == 'object':
+        else:
             dtype = DataType.String
-
-        name_offset = builder.CreateString(col_name)
         ColumnMetadata.ColumnMetadataStart(builder)
-        ColumnMetadata.ColumnMetadataAddName(builder, name_offset)
+        ColumnMetadata.ColumnMetadataAddName(builder, name)
         ColumnMetadata.ColumnMetadataAddDtype(builder, dtype)
-        col_metadata_offsets.append(ColumnMetadata.ColumnMetadataEnd(builder))
+        column_metadata.append(ColumnMetadata.ColumnMetadataEnd(builder))
 
-    ColumnMetadata.DataframeStartMetadataVector(builder, len(col_metadata_offsets))
-    for offset in reversed(col_metadata_offsets):
-        builder.PrependUOffsetTRelative(offset)
-    metadata_offset = builder.EndVector()
-
-    # Step 2: Serialize data for each column
-    column_offsets = []
+    # Create columns
+    columns = []
     for col_name, col_data in df.iteritems():
-        col_data = col_data.dropna()  # Drop NaN values
         col_dtype = df[col_name].dtype
-        col_data = col_data.values  # Convert to numpy array for performance
-
-        # Convert data to appropriate FlatBuffer vector type
+        Column.ColumnStart(builder)
         if col_dtype == 'int64':
-            Column.ColumnStartInt64DataVector(builder, len(col_data))
-            for val in reversed(col_data):
-                builder.PrependInt64(val)
-            int64_data_offset = builder.EndVector()
-            Column.ColumnStart(builder)
             Column.ColumnAddDtype(builder, DataType.Int64)
-            Column.ColumnAddInt64Data(builder, int64_data_offset)
-            column_offsets.append(Column.ColumnEnd(builder))
+            int_data = builder.CreateNumpyVector(col_data.values)
+            Column.ColumnAddInt64Data(builder, int_data)
         elif col_dtype == 'float64':
-            Column.ColumnStartFloatDataVector(builder, len(col_data))
-            for val in reversed(col_data):
-                builder.PrependFloat64(val)
-            float_data_offset = builder.EndVector()
-            Column.ColumnStart(builder)
             Column.ColumnAddDtype(builder, DataType.Float)
-            Column.ColumnAddFloatData(builder, float_data_offset)
-            column_offsets.append(Column.ColumnEnd(builder))
-        elif col_dtype == 'object':
-            string_data_offsets = [builder.CreateString(str(val)) for val in reversed(col_data)]
-            Column.ColumnStartStringDataVector(builder, len(string_data_offsets))
-            for offset in string_data_offsets:
-                builder.PrependUOffsetTRelative(offset)
-            string_data_offset = builder.EndVector()
-            Column.ColumnStart(builder)
-            Column.ColumnAddDtype(builder, Column.DataType.String)
-            Column.ColumnAddStringData(builder, string_data_offset)
-            column_offsets.append(Column.ColumnEnd(builder))
-    # Your code here
-    columns_offset = builder.EndVector()
+            float_data = builder.CreateNumpyVector(col_data.values)
+            Column.ColumnAddFloatData(builder, float_data)
+        else:
+            Column.ColumnAddDtype(builder, DataType.String)
+            string_data = [builder.CreateString(str(val)) for val in col_data.values]
+            Column.ColumnStartStringDataVector(builder, len(string_data))
+            for s in reversed(string_data):
+                builder.PrependUOffsetTRelative(s)
+            string_data = builder.EndVector(len(string_data))
+            Column.ColumnAddStringData(builder, string_data)
+        columns.append(Column.ColumnEnd(builder))
 
-    # Step 3: Serialize the Dataframe
+    # Create Dataframe
+    Dataframe.DataframeStartMetadataVector(builder, len(column_metadata))
+    for meta in reversed(column_metadata):
+        builder.PrependUOffsetTRelative(meta)
+    metadata = builder.EndVector(len(column_metadata))
+
+    Dataframe.DataframeStartColumnsVector(builder, len(columns))
+    for col in reversed(columns):
+        builder.PrependUOffsetTRelative(col)
+    columns_data = builder.EndVector(len(columns))
+
     Dataframe.DataframeStart(builder)
-    Dataframe.DataframeAddMetadata(builder, metadata_offset)
-    Dataframe.DataframeAddColumns(builder, columns_offset)
-    fb_dataframe = Dataframe.DataframeEnd(builder)
+    Dataframe.DataframeAddMetadata(builder, metadata)
+    Dataframe.DataframeAddColumns(builder, columns_data)
+    df_obj = Dataframe.DataframeEnd(builder)
+    builder.Finish(df_obj)
 
-    builder.Finish(fb_dataframe)
     return builder.Output()
-
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     """
-        Returns the first n rows of the Flatbuffer Dataframe as a Pandas Dataframe
-        similar to df.head(). If there are less than n rows, return the entire Dataframe.
-        Hint: don't forget the column names!
-
-        @param fb_bytes: bytes of the Flatbuffer Dataframe.
-        @param rows: number of rows to return.
+    Returns the first n rows of the Flatbuffer Dataframe as a Pandas Dataframe
+    similar to df.head(). If there are less than n rows, return the entire Dataframe.
     """
-    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+    df = Dataframe.Dataframe.GetRootAs(fb_bytes, 0)
 
+    columns = []
+    for i in range(df.ColumnsLength()):
+        col = df.Columns(i)
+        column_name = df.Metadata(i).Name().decode('utf-8')
+        column_type = df.Metadata(i).Dtype()
+        if column_type == DataType.Int64:
+            column_data = list(col.Int64DataAsNumpy())[:rows]
+        elif column_type == DataType.Float:
+            column_data = list(col.FloatDataAsNumpy())[:rows]
+        else:
+            column_data = [col.StringData(j).decode('utf-8') for j in range(min(rows, col.StringDataLength()))]
+        columns.append(pd.Series(column_data, name=column_name))
 
+    return pd.DataFrame({col.name: col for col in columns})
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
     """
-        Applies GROUP BY SUM operation on the flatbuffer dataframe grouping by grouping_col_name
-        and summing sum_col_name. Returns the aggregate result as a Pandas dataframe.
-
-        @param fb_bytes: bytes of the Flatbuffer Dataframe.
-        @param grouping_col_name: column to group by.
-        @param sum_col_name: column to sum.
+    Applies GROUP BY SUM operation on the flatbuffer dataframe grouping by grouping_col_name
+    and summing sum_col_name. Returns the aggregate result as a Pandas dataframe.
     """
-    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+    df = Dataframe.Dataframe.GetRootAs(fb_bytes, 0)
+
+    # Find the column indexes for grouping and summing
+    grouping_col_idx = None
+    sum_col_idx = None
+    for i in range(df.MetadataLength()):
+        col_meta = df.Metadata(i)
+        col_name = col_meta.Name().decode('utf-8')
+        if col_name == grouping_col_name:
+            grouping_col_idx = i
+        elif col_name == sum_col_name:
+            sum_col_idx = i
+
+    if grouping_col_idx is None or sum_col_idx is None:
+        raise ValueError(f"Column '{grouping_col_name}' or '{sum_col_name}' not found in the dataframe.")
+
+    # Extract the grouping and summing columns
+    grouping_col = df.Columns(grouping_col_idx)
+    sum_col = df.Columns(sum_col_idx)
+
+    # Perform groupby sum
+    groupby_dict = {}
+    if grouping_col.Dtype() == DataType.Int64:
+        grouping_values = grouping_col.Int64DataAsNumpy()
+    elif grouping_col.Dtype() == DataType.Float:
+        grouping_values = grouping_col.FloatDataAsNumpy()
+    else:
+        grouping_values = [grouping_col.StringData(j).decode('utf-8') for j in range(grouping_col.StringDataLength())]
+
+    if sum_col.Dtype() == DataType.Int64:
+        sum_values = sum_col.Int64DataAsNumpy()
+    elif sum_col.Dtype() == DataType.Float:
+        sum_values = sum_col.FloatDataAsNumpy()
+    else:
+        raise ValueError("The sum column must be numeric.")
+
+    for group, value in zip(grouping_values, sum_values):
+        groupby_dict[group] = groupby_dict.get(group, 0) + value
+
+    return pd.DataFrame({'GroupBy': groupby_dict.keys(), sum_col_name: groupby_dict.values()})
 
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
