@@ -4,13 +4,12 @@ import struct
 import time
 import types
 import numpy as np
-from CS598.Column import ColumnAddFloatData, ColumnAddIntData, ColumnAddName, ColumnAddStringData, ColumnEnd, ColumnStart
-from CS598.Column import ColumnAddDataType
-import CS598.DataFrame as df_fb
-
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-import CS598
+import CS598.DataFrame
+import CS598.FloatColumn
+import CS598.IntColumn
+import CS598.StringColumn
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     # Initialize the Flatbuffer builder
