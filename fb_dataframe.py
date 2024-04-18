@@ -6,6 +6,7 @@ import types
 import numpy as np
 from CS598.Column import ColumnAddFloatData, ColumnAddIntData, ColumnAddName, ColumnAddStringData, ColumnEnd, ColumnStart
 from CS598.Column import ColumnAddDataType
+import CS598.DataFrame as df_fb
 
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
@@ -14,59 +15,66 @@ import CS598.Column as Column
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
-    Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
+        Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
 
-    The flatbuffer should follow a columnar format as follows:
-    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
-    | DF metadata | col 1 metadata | val 1 | val 2 | ... | col 2 metadata | val 1 | val 2 | ... |
-    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
-    You are free to put any bookkeeping items in the metadata. however, for autograding purposes:
-    1. Make sure that the values in the columns are laid out in the flatbuffer as specified above
-    2. Serialize int and float values using flatbuffer's 'PrependInt64' and 'PrependFloat64'
-        functions, respectively (i.e., don't convert them to strings yourself - you will lose
-        precision for floats).
+        The flatbuffer should follow a columnar format as follows:
+        +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
+        | DF metadata | col 1 metadata | val 1 | val 2 | ... | col 2 metadata | val 1 | val 2 | ... |
+        +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
+        You are free to put any bookkeeping items in the metadata. however, for autograding purposes:
+        1. Make sure that the values in the columns are laid out in the flatbuffer as specified above
+        2. Serialize int and float values using flatbuffer's 'PrependInt64' and 'PrependFloat64'
+            functions, respectively (i.e., don't convert them to strings yourself - you will lose
+            precision for floats).
 
-    @param df: the dataframe.
+        @param df: the dataframe.
     """
-    builder = flatbuffers.Builder(0)
-    column_offsets = []
+    builder = flatbuffers.Builder(1024)
+    
+    # Start building the Flatbuffer
+    col_offsets = []
+    for col_name, col_data in df.items():
+        col_type = col_data.dtype
+        if col_type == 'int64':
+            # Rest of the code...
+            col_offsets.append(df_fb.DataFrame.EndCol(builder))
+        elif col_type == 'float64':
+            # Add float64 column data
+            df_fb.DataFrame.StartFloatdataVector(builder, len(col_data))
+            for val in col_data:
+                builder.PrependFloat64(val)
+            floatdata = builder.EndVector(len(col_data))
+            df_fb.DataFrame.StartCol(builder)
+            df_fb.DataFrame.AddName(builder, builder.CreateString(col_name))
+            df_fb.DataFrame.AddType(builder, df_fb.DataType.Float)
+            df_fb.DataFrame.AddData(builder, floatdata)
+            col_offsets.append(df_fb.DataFrame.EndCol(builder))
+        elif col_type == 'object':
+            # Add object (string) column data
+            string_offsets = [builder.CreateString(str(val)) for val in col_data]
+            df_fb.DataFrame.StartStringdataVector(builder, len(string_offsets))
+            for string_offset in reversed(string_offsets):
+                builder.PrependUOffsetTRelative(string_offset)
+            stringdata = builder.EndVector(len(string_offsets))
+            df_fb.DataFrame.StartCol(builder)
+            df_fb.DataFrame.AddName(builder, builder.CreateString(col_name))
+            df_fb.DataFrame.AddType(builder, df_fb.DataType.String)
+            df_fb.DataFrame.AddData(builder, stringdata)
+            col_offsets.append(df_fb.DataFrame.EndCol(builder))
 
-    for column_name, column_data in df.items():
-        column_name_offset = builder.CreateString(column_name)
-        data_type = 2  # Default to string
-        int_data_offset = float_data_offset = string_data_offset = None
+    # Add column metadata
+    df_fb.DataFrame.StartColsVector(builder, len(col_offsets))
+    for col_offset in reversed(col_offsets):
+        builder.PrependUOffsetTRelative(col_offset)
+    cols = builder.EndVector(len(col_offsets))
 
-        if column_data.dtype == np.int64:
-            data_type = 0
-            int_data_offset = builder.CreateNumpyVector(column_data.values)
-        elif column_data.dtype == np.float64:
-            data_type = 1
-            float_data_offset = builder.CreateNumpyVector(column_data.values)
-        else:
-            string_data_offset = builder.CreateNumpyVector(np.array([builder.CreateString(str(val)) for val in column_data.values]))
+    # Add dataframe metadata
+    df_fb.DataFrame.Start(builder)
+    df_fb.DataFrame.AddCols(builder, cols)
+    fb_df = df_fb.DataFrame.End(builder)
 
-        ColumnStart(builder)
-        ColumnAddName(builder, column_name_offset)
-        ColumnAddDataType(builder, data_type)
-        if int_data_offset:
-            ColumnAddIntData(builder, int_data_offset)
-        elif float_data_offset:
-            ColumnAddFloatData(builder, float_data_offset)
-        elif string_data_offset:
-            ColumnAddStringData(builder, string_data_offset)
-        column_offsets.append(ColumnEnd(builder))
-
-    DataFrame.DataFrameStartColumnsVector(builder, len(column_offsets))
-    for offset in reversed(column_offsets):
-        builder.PrependUOffsetTRelative(offset)
-    columns_offset = builder.EndVector(len(column_offsets))
-
-    DataFrame.DataFrameStart(builder)
-    DataFrame.DataFrameAddColumns(builder, columns_offset)
-    df_offset = DataFrame.DataFrameEnd(builder)
-
-    builder.Finish(df_offset)
-    return bytearray(builder.Output())
+    builder.Finish(fb_df)
+    return builder.Output()
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
