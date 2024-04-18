@@ -8,6 +8,7 @@ import numpy as np
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
 import CS598.DataFrame as DataFrame
+import CS598.Column as Column
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
@@ -42,31 +43,31 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
         else:
             string_data_offset = builder.CreateNumpyVector([builder.CreateString(str(val)) for val in column_data.values])
 
-        column_table.Reset()
-        column_table.Add('dtype', data_type)
+        ColumnStart(builder)
+        ColumnAddName(builder, column_name_offset)
+        ColumnAddDataType(builder, data_type)
         if int_data_offset:
-            column_table.Add('int64_data', int_data_offset)
+            ColumnAddIntData(builder, int_data_offset)
         elif float_data_offset:
-            column_table.Add('float_data', float_data_offset)
+            ColumnAddFloatData(builder, float_data_offset)
         elif string_data_offset:
-            column_table.Add('string_data', string_data_offset)
-        column_offsets.append(column_table)
+            ColumnAddStringData(builder, string_data_offset)
+        column_offsets.append(ColumnEnd(builder))
 
-    DataFrame.DataFrameStartColumnsVector(builder, len(column_offsets))
+    DataFrameStartColumnsVector(builder, len(column_offsets))
     for offset in reversed(column_offsets):
         builder.PrependUOffsetTRelative(offset)
     columns_offset = builder.EndVector(len(column_offsets))
 
-    DataFrame.DataFrameStart(builder)
-    DataFrame.DataFrameAddMetadata(builder, columns_offset)  # Assuming metadata corresponds to column definitions
-    df_offset = DataFrame.DataFrameEnd(builder)
+    DataFrameStart(builder)
+    DataFrameAddColumns(builder, columns_offset)
+    df_offset = DataFrameEnd(builder)
 
     builder.Finish(df_offset)
-    return bytearray(builder.Output())  # REPLACE THIS WITH YOUR CODE...
-
+    return bytearray(builder.Output())
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
-    df = fbDataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
+    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
     columns = []
     for i in range(df.ColumnsLength()):
         column = df.Columns(i)
@@ -83,7 +84,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     return pd.DataFrame({column.name: column for column in columns})
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
-    df = fbDataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
+    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
     group_col_idx = None
     sum_col_idx = None
     column_names = []
@@ -121,7 +122,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     return agg_result
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
-    df = fbDataFrame.DataFrame.GetRootAsDataFrame(fb_buf, 0)
+    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_buf, 0)
     map_col_idx = None
 
     for i in range(df.ColumnsLength()):
