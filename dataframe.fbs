@@ -1,4 +1,4 @@
-namespace DataFrame;
+namespace CS598;
 
 enum DataType: byte {
     Int64 = 0,
