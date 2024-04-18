@@ -6,7 +6,7 @@ import types
 import numpy as np
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-from Dataframe_generated import (  # Assuming this is the generated filename
+from Dataframe import (  # Assuming this is the generated filename
     Dataframe as RootTable,  # Update with the actual class name for Dataframe
     ColumnMetadata,
     DataType,
