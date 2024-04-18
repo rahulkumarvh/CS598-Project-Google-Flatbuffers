@@ -6,7 +6,7 @@ import types
 import numpy as np
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-from Dataframe_generated import Dataframe, ColumnMetadata, DataType, Column
+from Dataframe import Dataframe, ColumnMetadata, DataType, Column
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
   """
