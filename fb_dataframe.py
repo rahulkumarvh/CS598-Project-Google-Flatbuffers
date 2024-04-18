@@ -3,6 +3,7 @@ import pandas as pd
 import struct
 import time
 import types
+import numpy as np
 
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
@@ -77,21 +78,24 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
         if column_name == grouping_col_name:
             group_col_idx = i
             if data_type == 0:  # int64
-                column_data.append(column.IntData().AsNumpy())
+                column_data.append(list(column.IntData().AsNumpy()))
             elif data_type == 1:  # float64
-                column_data.append(column.FloatData().AsNumpy())
+                column_data.append(list(column.FloatData().AsNumpy()))
             else:  # string
                 column_data.append([column.StringData(j).decode('utf-8') for j in range(column.StringDataLength())])
         elif column_name == sum_col_name:
             sum_col_idx = i
             if data_type == 0:  # int64
-                column_data.append(column.IntData().AsNumpy())
+                column_data.append(list(column.IntData().AsNumpy()))
             elif data_type == 1:  # float64
-                column_data.append(column.FloatData().AsNumpy())
+                column_data.append(list(column.FloatData().AsNumpy()))
             else:  # string
                 column_data.append([column.StringData(j).decode('utf-8') for j in range(column.StringDataLength())])
         else:
-            column_data.append(np.zeros(len(column.IntData().AsNumpy())))
+            column_data.append([])
+
+    if group_col_idx is None or sum_col_idx is None:
+        return pd.DataFrame()
 
     result_df = pd.DataFrame({column_names[i]: column_data[i] for i in range(len(column_names))})
     grouped = result_df.groupby(column_names[group_col_idx])
