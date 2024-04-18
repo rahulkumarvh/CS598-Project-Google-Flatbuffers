@@ -26,7 +26,8 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_data in df.items():
         data_type = DataType.String if pd.api.types.is_string_dtype(col_data) else DataType.Int64
         column_metadata.append(
-            ColumnMetadata.CreateColumnMetadata(builder, col_name, data_type)
+            # Update with the correct method for creating ColumnMetadata
+            ColumnMetadata.CreateColumnMetadata(builder, col_name, data_type)  # Maybe NewColumnMetadata?
         )
 
         if data_type == DataType.Int64:
