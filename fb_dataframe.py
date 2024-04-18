@@ -4,6 +4,8 @@ import struct
 import time
 import types
 import numpy as np
+from CS598.Column import ColumnAddFloatData, ColumnAddIntData, ColumnAddName, ColumnAddStringData, ColumnEnd, ColumnStart
+from CS598.Column import ColumnAddDataType
 
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
@@ -54,14 +56,14 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
             ColumnAddStringData(builder, string_data_offset)
         column_offsets.append(ColumnEnd(builder))
 
-    DataFrameStartColumnsVector(builder, len(column_offsets))
+    DataFrame.DataFrameStartColumnsVector(builder, len(column_offsets))
     for offset in reversed(column_offsets):
         builder.PrependUOffsetTRelative(offset)
     columns_offset = builder.EndVector(len(column_offsets))
 
-    DataFrameStart(builder)
-    DataFrameAddColumns(builder, columns_offset)
-    df_offset = DataFrameEnd(builder)
+    DataFrame.DataFrameStart(builder)
+    DataFrame.DataFrameAddColumns(builder, columns_offset)
+    df_offset = DataFrame.DataFrameEnd(builder)
 
     builder.Finish(df_offset)
     return bytearray(builder.Output())
