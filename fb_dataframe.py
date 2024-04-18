@@ -7,7 +7,7 @@ import numpy as np
 
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-from CS598 import DataFrame as fbDataFrame
+import CS598.DataFrame as DataFrame
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
@@ -42,17 +42,25 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
         else:
             string_data_offset = builder.CreateNumpyVector([builder.CreateString(str(val)) for val in column_data.values])
 
-        fbColumn = fbDataFrame.CreateColumn(builder, column_name_offset, data_type, int_data_offset, float_data_offset, string_data_offset)
-        column_offsets.append(fbColumn)
+        Column.ColumnStart(builder)
+        Column.ColumnAddName(builder, column_name_offset)
+        Column.ColumnAddDataType(builder, data_type)
+        if int_data_offset:
+            Column.ColumnAddIntData(builder, int_data_offset)
+        elif float_data_offset:
+            Column.ColumnAddFloatData(builder, float_data_offset)
+        elif string_data_offset:
+            Column.ColumnAddStringData(builder, string_data_offset)
+        column_offsets.append(Column.ColumnEnd(builder))
 
-    fbDataFrame.DataFrameStartColumnsVector(builder, len(column_offsets))
+    DataFrame.DataFrameStartColumnsVector(builder, len(column_offsets))
     for offset in reversed(column_offsets):
         builder.PrependUOffsetTRelative(offset)
     columns_offset = builder.EndVector(len(column_offsets))
 
-    fbDataFrame.DataFrameStart(builder)
-    fbDataFrame.DataFrameAddColumns(builder, columns_offset)
-    df_offset = fbDataFrame.DataFrameEnd(builder)
+    DataFrameStart(builder)
+    DataFrameAddColumns(builder, columns_offset)
+    df_offset = DataFrameEnd(builder)
 
     builder.Finish(df_offset)
     return bytearray(builder.Output())  # REPLACE THIS WITH YOUR CODE...
