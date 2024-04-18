@@ -1,4 +1,4 @@
-namespace Dataframe;
+namespace DataFrame;
 
 enum DataType: byte {
     Int64 = 0,
@@ -7,20 +7,20 @@ enum DataType: byte {
 }
 
 table ColumnMetadata {
-  name: string;  // Name of the column
-  dtype: DataType;  // Data type of the column
-}
-
-table Dataframe {
-  metadata: [ColumnMetadata]; // Metadata for all columns
-  columns: [Column]; // Columns data
+    name: string;
+    dtype: DataType;
 }
 
 table Column {
-  dtype: DataType;
-  int64_data: [int64];
-  float_data: [float];
-  string_data: [string];
+    dtype: DataType;
+    int64_data: [int64];
+    float_data: [float];
+    string_data: [string];
+}
+
+table Dataframe {
+    metadata: [ColumnMetadata];
+    columns: [Column];
 }
 
 root_type Dataframe;

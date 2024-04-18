@@ -6,26 +6,11 @@ import types
 import numpy as np
 
 # Your Flatbuffer imports here
-from Dataframe import Column, ColumnMetadata, Dataframe, DataType
-from Dataframe import DataType
+from DataFrame import Column, ColumnMetadata, Dataframe, DataType
+from DataFrame import DataType
 
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
-    """
-    Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
-
-    The flatbuffer should follow a columnar format as follows:
-    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
-    | DF metadata | col 1 metadata | val 1 | val 2 | ... | col 2 metadata | val 1 | val 2 | ... |
-    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
-    You are free to put any bookkeeping items in the metadata. however, for autograding purposes:
-    1. Make sure that the values in the columns are laid out in the flatbuffer as specified above
-    2. Serialize int and float values using flatbuffer's 'PrependInt64' and 'PrependFloat64'
-        functions, respectively (i.e., don't convert them to strings yourself - you will lose
-        precision for floats).
-
-    @param df: the dataframe.
-    """
     builder = flatbuffers.Builder(1024)
 
     # Step 1: Serialize metadata for each column
@@ -33,75 +18,72 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_dtype in zip(df.columns, df.dtypes):
         dtype = None
         if col_dtype == 'int64':
-            dtype = Dataframe.DataType.Int64
+            dtype = DataFrame.DataType.Int64
         elif col_dtype == 'float64':
-            dtype = Dataframe.DataType.Float
+            dtype = DataFrame.DataType.Float
         elif col_dtype == 'object':
-            dtype = Dataframe.DataType.String
+            dtype = DataFrame.DataType.String
 
-        if dtype is not None:
-            col_metadata = ColumnMetadata.CreateColumnMetadata(builder, builder.CreateString(col_name), dtype)
-            col_metadata_offsets.append(col_metadata)
+        name_offset = builder.CreateString(col_name)
+        DataFrame.ColumnMetadataStart(builder)
+        DataFrame.ColumnMetadataAddName(builder, name_offset)
+        DataFrame.ColumnMetadataAddDtype(builder, dtype)
+        col_metadata_offsets.append(DataFrame.ColumnMetadataEnd(builder))
 
-    # Step 2: Serialize column data
-    column_offsets = []
-    for col_name, col_data in df.iteritems():
-        dtype = None
-        if col_data.dtype == 'int64':
-            dtype = Dataframe.DataType.Int64
-            col_data = col_data.astype(int)
-            col_data = col_data.values.tolist()
-        elif col_data.dtype == 'float64':
-            dtype = Dataframe.DataType.Float
-            col_data = col_data.astype(float)
-            col_data = col_data.values.tolist()
-        elif col_data.dtype == 'object':
-            dtype = Dataframe.DataType.String
-            col_data = col_data.astype(str)
-            col_data = [builder.CreateString(val) for val in col_data.values.tolist()]
-
-        if dtype is not None:
-            if dtype == Dataframe.DataType.Int64:
-                Column.ColumnStartInt64DataVector(builder, len(col_data))
-                for val in reversed(col_data):
-                    builder.PrependInt64(val)
-                int64_data = builder.EndVector(len(col_data))
-                Column.ColumnAddInt64Data(builder, int64_data)
-            elif dtype == Dataframe.DataType.Float:
-                Column.ColumnStartFloatDataVector(builder, len(col_data))
-                for val in reversed(col_data):
-                    builder.PrependFloat64(val)
-                float_data = builder.EndVector(len(col_data))
-                Column.ColumnAddFloatData(builder, float_data)
-            elif dtype == DataType.String:
-                Column.ColumnStartStringDataVector(builder, len(col_data))
-                for val in reversed(col_data):
-                    builder.PrependUOffsetTRelative(builder.CreateString(val))
-                string_data = builder.EndVector(len(col_data))
-                Column.ColumnAddStringData(builder, string_data)
-
-            Column.ColumnStart(builder)
-            Column.ColumnAddDtype(builder, dtype)
-            column_offset = Column.ColumnEnd(builder)
-            column_offsets.append(column_offset)
-
-    # Step 3: Serialize DataFrame
-    Dataframe.DataframeStartMetadataVector(builder, len(col_metadata_offsets))
+    DataFrame.DataframeStartMetadataVector(builder, len(col_metadata_offsets))
     for offset in reversed(col_metadata_offsets):
         builder.PrependUOffsetTRelative(offset)
-    metadata_vector = builder.EndVector(len(col_metadata_offsets))
+    metadata_offset = builder.EndVector()
 
-    Dataframe.DataframeStartColumnsVector(builder, len(column_offsets))
+    # Step 2: Serialize data for each column
+    column_offsets = []
+    for col_name, col_data in df.iteritems():
+        col_data = col_data.dropna()  # Drop NaN values
+        col_dtype = df[col_name].dtype
+        col_data = col_data.values  # Convert to numpy array for performance
+
+        # Convert data to appropriate FlatBuffer vector type
+        if col_dtype == 'int64':
+            DataFrame.ColumnStartInt64DataVector(builder, len(col_data))
+            for val in reversed(col_data):
+                builder.PrependInt64(val)
+            int64_data_offset = builder.EndVector()
+            DataFrame.ColumnStart(builder)
+            DataFrame.ColumnAddDtype(builder, DataFrame.DataType.Int64)
+            DataFrame.ColumnAddInt64Data(builder, int64_data_offset)
+            column_offsets.append(DataFrame.ColumnEnd(builder))
+        elif col_dtype == 'float64':
+            DataFrame.ColumnStartFloatDataVector(builder, len(col_data))
+            for val in reversed(col_data):
+                builder.PrependFloat64(val)
+            float_data_offset = builder.EndVector()
+            DataFrame.ColumnStart(builder)
+            DataFrame.ColumnAddDtype(builder, DataFrame.DataType.Float)
+            DataFrame.ColumnAddFloatData(builder, float_data_offset)
+            column_offsets.append(DataFrame.ColumnEnd(builder))
+        elif col_dtype == 'object':
+            string_data_offsets = [builder.CreateString(str(val)) for val in reversed(col_data)]
+            DataFrame.ColumnStartStringDataVector(builder, len(string_data_offsets))
+            for offset in string_data_offsets:
+                builder.PrependUOffsetTRelative(offset)
+            string_data_offset = builder.EndVector()
+            DataFrame.ColumnStart(builder)
+            DataFrame.ColumnAddDtype(builder, DataFrame.DataType.String)
+            DataFrame.ColumnAddStringData(builder, string_data_offset)
+            column_offsets.append(DataFrame.ColumnEnd(builder))
+
+    DataFrame.DataframeStartColumnsVector(builder, len(column_offsets))
     for offset in reversed(column_offsets):
         builder.PrependUOffsetTRelative(offset)
-    columns_vector = builder.EndVector(len(column_offsets))
+    columns_offset = builder.EndVector()
 
-    Dataframe.DataframeStart(builder)
-    Dataframe.DataframeAddMetadata(builder, metadata_vector)
-    Dataframe.DataframeAddColumns(builder, columns_vector)
-    df_offset = Dataframe.DataframeEnd(builder)
+    # Step 3: Serialize the Dataframe
+    DataFrame.DataframeStart(builder)
+    DataFrame.DataframeAddMetadata(builder, metadata_offset)
+    DataFrame.DataframeAddColumns(builder, columns_offset)
+    fb_dataframe = DataFrame.DataframeEnd(builder)
 
-    builder.Finish(df_offset)
+    builder.Finish(fb_dataframe)
     return builder.Output()
 
 
