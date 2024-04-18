@@ -37,7 +37,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
         col_type = col_data.dtype
         if col_type == 'int64':
             # Rest of the code...
-            col_offsets.append(df_fb.DataFrame.EndCol(builder))
+            col_offsets.append(builder.EndCol())
         elif col_type == 'float64':
             # Add float64 column data
             df_fb.DataFrame.StartFloatdataVector(builder, len(col_data))
@@ -48,7 +48,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
             df_fb.DataFrame.AddName(builder, builder.CreateString(col_name))
             df_fb.DataFrame.AddType(builder, df_fb.DataType.Float)
             df_fb.DataFrame.AddData(builder, floatdata)
-            col_offsets.append(df_fb.DataFrame.EndCol(builder))
+            col_offsets.append(builder.EndCol())
         elif col_type == 'object':
             # Add object (string) column data
             string_offsets = [builder.CreateString(str(val)) for val in col_data]
@@ -60,7 +60,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
             df_fb.DataFrame.AddName(builder, builder.CreateString(col_name))
             df_fb.DataFrame.AddType(builder, df_fb.DataType.String)
             df_fb.DataFrame.AddData(builder, stringdata)
-            col_offsets.append(df_fb.DataFrame.EndCol(builder))
+            col_offsets.append(builder.EndCol())
 
     # Add column metadata
     df_fb.DataFrame.StartColsVector(builder, len(col_offsets))
