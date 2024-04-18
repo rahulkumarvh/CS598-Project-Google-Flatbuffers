@@ -74,10 +74,10 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     columns_offset = builder.EndVector()
 
     # Step 3: Serialize the Dataframe
-    CS598.Dataframe.DataframeStart(builder)
-    CS598.Dataframe.DataframeAddMetadata(builder, metadata_offset)
-    CS598.Dataframe.DataframeAddColumns(builder, columns_offset)
-    fb_dataframe = CS598.Dataframe.DataframeEnd(builder)
+    Dataframe.DataframeStart(builder)
+    Dataframe.DataframeAddMetadata(builder, metadata_offset)
+    Dataframe.DataframeAddColumns(builder, columns_offset)
+    fb_dataframe = Dataframe.DataframeEnd(builder)
 
     builder.Finish(fb_dataframe)
     return builder.Output()
