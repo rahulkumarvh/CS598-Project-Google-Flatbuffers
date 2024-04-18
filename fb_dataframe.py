@@ -8,6 +8,7 @@ import numpy as np
 # Your Flatbuffer imports here
 from DataFrame import Column, ColumnMetadata, Dataframe, DataType
 from DataFrame import DataType
+import DataFrame
 
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
