@@ -10,6 +10,21 @@ import numpy as np
 from CS598 import DataFrame as fbDataFrame
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
+    """
+    Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
+
+    The flatbuffer should follow a columnar format as follows:
+    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
+    | DF metadata | col 1 metadata | val 1 | val 2 | ... | col 2 metadata | val 1 | val 2 | ... |
+    +-------------+----------------+-------+-------+-----+----------------+-------+-------+-----+
+    You are free to put any bookkeeping items in the metadata. however, for autograding purposes:
+    1. Make sure that the values in the columns are laid out in the flatbuffer as specified above
+    2. Serialize int and float values using flatbuffer's 'PrependInt64' and 'PrependFloat64'
+        functions, respectively (i.e., don't convert them to strings yourself - you will lose
+        precision for floats).
+
+    @param df: the dataframe.
+    """
     builder = flatbuffers.Builder(0)
     column_offsets = []
 
@@ -25,13 +40,13 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
             data_type = 1
             float_data_offset = builder.CreateNumpyVector(column_data.values)
         else:
-            string_data_offset = builder.CreateNumpyVector([builder.CreateString(val) for val in column_data.values])
+            string_data_offset = builder.CreateNumpyVector([builder.CreateString(str(val)) for val in column_data.values])
 
-    fbColumn = fbDataFrame.CreateColumn(builder, column_name_offset, data_type, int_data_offset, float_data_offset, string_data_offset)
-    column_offsets.append(fbColumn)
+        fbColumn = fbDataFrame.CreateColumn(builder, column_name_offset, data_type, int_data_offset, float_data_offset, string_data_offset)
+        column_offsets.append(fbColumn)
 
     fbDataFrame.DataFrameStartColumnsVector(builder, len(column_offsets))
-    for offset in column_offsets:
+    for offset in reversed(column_offsets):
         builder.PrependUOffsetTRelative(offset)
     columns_offset = builder.EndVector(len(column_offsets))
 
@@ -40,7 +55,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     df_offset = fbDataFrame.DataFrameEnd(builder)
 
     builder.Finish(df_offset)
-    return builder.Output()  # REPLACE THIS WITH YOUR CODE...
+    return bytearray(builder.Output())  # REPLACE THIS WITH YOUR CODE...
 
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
