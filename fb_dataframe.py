@@ -95,7 +95,37 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     @param rows: number of rows to return.
     """
 
-    return pd.DataFrame()
+    # Initialize an empty list to store column data
+    columns_data = []
+
+    # Get the Flatbuffer Dataframe
+    fb_dataframe = Dataframe.Dataframe.GetRootAsDataframe(fb_bytes, 0)
+
+    # Get metadata
+    metadata = [ColumnMetadata.ColumnMetadata().Init(fb_dataframe.Metadata(i)) for i in range(fb_dataframe.MetadataLength())]
+
+    # Extract column names and types
+    column_names = [metadata[i].Name().decode('utf-8') for i in range(len(metadata))]
+    column_types = [metadata[i].Dtype() for i in range(len(metadata))]
+
+    # Iterate over columns
+    for i in range(fb_dataframe.ColumnsLength()):
+        column = fb_dataframe.Columns(i)
+        column_type = column_types[i]
+        if column_type == DataType.Int64:
+            # Extract int64 data
+            column_data = [column.Int64Data(j) for j in range(column.Int64DataLength())]
+        elif column_type == DataType.Float:
+            # Extract float data
+            column_data = [column.FloatData(j) for j in range(column.FloatDataLength())]
+        elif column_type == DataType.String:
+            # Extract string data
+            column_data = [column.StringData(j).decode('utf-8') for j in range(column.StringDataLength())]
+        columns_data.append(column_data)
+
+    # Create DataFrame
+    data = {column_names[i]: columns_data[i][:rows] for i in range(len(column_names))}
+    return pd.DataFrame(data)
 
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
