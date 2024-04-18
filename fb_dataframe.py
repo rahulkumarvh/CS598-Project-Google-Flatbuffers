@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Callable, Any
 import flatbuffers
-from CS598 import Dataframe, Column, ColumnMetadata, DataType
+from CS598 import Dataframe, ColumnMetadata, Column, DataType
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
