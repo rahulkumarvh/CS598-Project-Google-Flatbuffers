@@ -14,18 +14,18 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     column_offsets = []
 
     for column_name, column_data in df.items():
-    column_name_offset = builder.CreateString(column_name)
-    data_type = 2  # Default to string
-    int_data_offset = float_data_offset = string_data_offset = None
+        column_name_offset = builder.CreateString(column_name)
+        data_type = 2  # Default to string
+        int_data_offset = float_data_offset = string_data_offset = None
 
-    if column_data.dtype == np.int64:
-        data_type = 0
-        int_data_offset = builder.CreateNumpyVector(column_data.values)
-    elif column_data.dtype == np.float64:
-        data_type = 1
-        float_data_offset = builder.CreateNumpyVector(column_data.values)
-    else:
-        string_data_offset = builder.CreateNumpyVector([builder.CreateString(val) for val in column_data.values])
+        if column_data.dtype == np.int64:
+            data_type = 0
+            int_data_offset = builder.CreateNumpyVector(column_data.values)
+        elif column_data.dtype == np.float64:
+            data_type = 1
+            float_data_offset = builder.CreateNumpyVector(column_data.values)
+        else:
+            string_data_offset = builder.CreateNumpyVector([builder.CreateString(val) for val in column_data.values])
 
     fbColumn = fbDataFrame.CreateColumn(builder, column_name_offset, data_type, int_data_offset, float_data_offset, string_data_offset)
     column_offsets.append(fbColumn)
