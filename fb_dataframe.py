@@ -99,7 +99,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     columns_data = []
 
     # Get the Flatbuffer Dataframe
-    fb_dataframe = Dataframe.Dataframe.GetRootAsDataframe(fb_bytes, 0)
+    fb_dataframe = Dataframe.GetRootAsDataframe(fb_bytes, 0)
 
     # Get metadata
     metadata = [ColumnMetadata.ColumnMetadata().Init(fb_dataframe.Metadata(i)) for i in range(fb_dataframe.MetadataLength())]
