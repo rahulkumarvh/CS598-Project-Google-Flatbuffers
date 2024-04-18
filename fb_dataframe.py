@@ -12,6 +12,8 @@ from Dataframe.DataType import DataType
 from Dataframe.Dataframe import Dataframe  # Assuming this is the actual class name for Dataframe
 
 
+from Dataframe.ColumnMetadata import Start, AddName, AddDtype, End, CreateString
+
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
     Converts a Pandas DataFrame to a Flatbuffer. Returns the bytearray of the Flatbuffer.
@@ -20,29 +22,40 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
     builder = flatbuffers.Builder()
 
-    # Create ColumnMetadata and Column data based on data types
-    column_metadata = []
-    columns = []
+    # Create a list to hold column metadata
+    column_metadata_offsets = []
+
     for col_name, col_data in df.items():
-        data_type = DataType.String if pd.api.types.is_string_dtype(col_data) else DataType.Int64
-        column_metadata.append(
-            # Update with the correct method for creating ColumnMetadata
-            ColumnMetadata.CreateColumnMetadata(builder, col_name, data_type)
-        )
-
-        if data_type == DataType.Int64:
-            columns.append(Column.CreateColumn(builder, dtype=data_type, int64_data=col_data.tolist()))
-        elif data_type == DataType.Float:
-            columns.append(Column.CreateColumn(builder, dtype=data_type, float_data=col_data.tolist()))
+        # Start the creation of ColumnMetadata
+        Start(builder)
+        
+        # Add the name of the column
+        name_offset = builder.CreateString(col_name)
+        AddName(builder, name_offset)
+        
+        # Determine the data type of the column and add it
+        if pd.api.types.is_string_dtype(col_data):
+            dtype = DataType.String
         else:
-            columns.append(
-                Column.CreateColumn(builder, dtype=data_type, string_data=[str(val) for val in col_data.tolist()])
-            )
+            dtype = DataType.Int64
+        AddDtype(builder, dtype)
 
-    # Create Dataframe object
-    dataframe = Dataframe.CreateDataframe(
-        builder, metadata=builder.CreateVector(column_metadata), columns=builder.CreateVector(columns)
-    )
+        # End the creation of ColumnMetadata and add it to the list
+        column_metadata_offset = End(builder)
+        column_metadata_offsets.append(column_metadata_offset)
+
+    # Create a vector of column metadata
+    Dataframe.ColumnMetadataStart(builder)
+    Dataframe.ColumnMetadataAddMetadata(builder, builder.CreateVector(column_metadata_offsets))
+    column_metadata_vector = Dataframe.ColumnMetadataEnd(builder)
+
+    # Create the Dataframe object
+    Dataframe.DataframeStart(builder)
+    Dataframe.AddMetadata(builder, column_metadata_vector)
+    dataframe_offset = Dataframe.End(builder)
+
+    # Finish the buffer
+    builder.Finish(dataframe_offset)
 
     return builder.Output()
 
