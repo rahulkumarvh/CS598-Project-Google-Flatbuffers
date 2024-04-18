@@ -43,7 +43,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
             data_type = 1
             float_data_offset = builder.CreateNumpyVector(column_data.values)
         else:
-            string_data_offset = builder.CreateNumpyVector([builder.CreateString(str(val)) for val in column_data.values])
+            string_data_offset = builder.CreateNumpyVector(np.array([builder.CreateString(str(val)) for val in column_data.values]))
 
         ColumnStart(builder)
         ColumnAddName(builder, column_name_offset)
