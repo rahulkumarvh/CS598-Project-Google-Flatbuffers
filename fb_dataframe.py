@@ -16,33 +16,25 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
   """
   builder = flatbuffers.Builder()
 
-  # Create ColumnMetadata for each column
+  # Create ColumnMetadata and Column data based on data types
   column_metadata = []
+  columns = []
   for col_name, col_data in df.items():
-    # Determine data type
     data_type = DataType.String if pd.api.types.is_string_dtype(col_data) else (
         DataType.Float if pd.api.types.is_numeric_dtype(col_data) else DataType.Int64
     )
     column_metadata.append(ColumnMetadata.CreateColumnMetadata(builder, col_name, data_type))
 
-  # Create Column data based on data type
-  columns = []
-  for i, col_name in enumerate(df.columns):
-    col_data = df.iloc[:, i]
-    column = None
-    if pd.api.types.is_int64_dtype(col_data):
-      column = Column.CreateColumn(builder, dtype=DataType.Int64, int64_data=col_data.tolist())
-    elif pd.api.types.is_float_dtype(col_data):
-      column = Column.CreateColumn(builder, dtype=DataType.Float, float_data=col_data.tolist())
+    if data_type == DataType.Int64:
+      columns.append(Column.CreateColumn(builder, dtype=data_type, int64_data=col_data.tolist()))
+    elif data_type == DataType.Float:
+      columns.append(Column.CreateColumn(builder, dtype=data_type, float_data=col_data.tolist()))
     else:
-      column = Column.CreateColumn(builder, dtype=DataType.String, string_data=[str(val) for val in col_data.tolist()])
-    columns.append(column)
+      columns.append(Column.CreateColumn(builder, dtype=data_type, string_data=[str(val) for val in col_data.tolist()]))
 
   # Create Dataframe object
-  dataframe = Dataframe.CreateDataframe(builder,
-                                         metadata=builder.CreateVector(column_metadata),
-                                         columns=builder.CreateVector(columns))
-  
+  dataframe = Dataframe.CreateDataframe(builder, metadata=builder.CreateVector(column_metadata), columns=builder.CreateVector(columns))
+
   return builder.Output()
 
 
@@ -55,15 +47,14 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
   @param rows: number of rows to return.
   """
   df = Dataframe.GetRootAsDataframe(fb_bytes)
-  num_rows = min(rows, df.columns().__len__())
+  num_rows = min(rows, df.rows())
 
-  # Get column names and data types
+  # Get column names and data
   column_names = [m.name() for m in df.metadata()]
   column_data = []
   for i in range(num_rows):
     row = []
-    for col_index in range(df.columns().__len__()):
-      col = df.columns()[col_index]
+    for col in df.columns():
       if col.dtype() == DataType.Int64:
         row.append(col.int64_data()[i])
       elif col.dtype() == DataType.Float:
@@ -73,7 +64,6 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     column_data.append(row)
 
   return pd.DataFrame(data=column_data, columns=column_names)
-  # REPLACE THIS WITH YOUR CODE...
 
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
