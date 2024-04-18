@@ -1,25 +1,36 @@
-namespace CS598;
+namespace MyGame;
 
-table IntColumn {
-  name:string;
-  values:[int];
+table Column {
+  // Name of the column
+  name: string;
+  // Data type of the column (int64, float64, string)
+  data_type: MyGame.DataType;
+  // Vector of actual column values (int64, float64, or string based on data_type)
+  data: (MyGame.IntVector | MyGame.FloatVector | MyGame.[StringVector]);
 }
 
-table FloatColumn {
-  name:string;
-  values:[float];
+enum DataType {
+  INT64,
+  FLOAT64,
+  STRING,
 }
 
-table StringColumn {
-  name:string;
-  values:[string];
-}
-
-// Define a table for a DataFrame
 table DataFrame {
-  int_columns:[IntColumn];
-  float_columns:[FloatColumn];
-  string_columns:[StringColumn];
+  // Number of rows in the dataframe
+  rows: int32;
+  // List of columns in the dataframe
+  columns: [Column];
 }
 
-root_type DataFrame;
+// Helper vector types for int64, float64, and string data
+struct IntVector {
+  data: [int64];
+}
+
+struct FloatVector {
+  data: [float64];
+}
+
+struct StringVector {
+  data: [offset: uoffset, string];
+}

@@ -19,7 +19,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     column_offsets = []
 
     # Iterate over the columns in the DataFrame
-    for column_name, series in df.iteritems():
+    for column_name, series in df.items():
         # Create the column name
         name_offset = builder.CreateString(column_name)
 
