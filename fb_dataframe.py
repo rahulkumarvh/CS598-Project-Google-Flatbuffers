@@ -9,23 +9,6 @@ import numpy as np
 
 import CS598.DataFrame as DataFrame
 
-namespace = "Dataframe"
-
-# Define the data type enum
-data_type_enum = flatbuffers.Enum(('Int64', 'Float', 'String'), namespace)
-
-# Define the table for ColumnMetadata
-column_metadata_table = flatbuffers.Table()
-column_metadata_table.Add('name', flatbuffers.String())
-column_metadata_table.Add('dtype', data_type_enum)
-
-# Define the table for Column
-column_table = flatbuffers.Table()
-column_table.Add('dtype', data_type_enum)
-column_table.Add('int64_data', flatbuffers.VectorInt64([]))
-column_table.Add('float_data', flatbuffers.VectorFloat([]))
-column_table.Add('string_data', flatbuffers.Vector())
-
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
     Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
