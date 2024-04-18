@@ -9,8 +9,6 @@ import numpy as np
 
 from CS598 import Column, ColumnMetadata, Dataframe, DataType
 
-
-
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     builder = flatbuffers.Builder(1024)
 
@@ -104,7 +102,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     fb_dataframe = Dataframe.GetRootAsDataframe(fb_bytes, 0)
 
     # Get metadata
-    metadata = [ColumnMetadata.ColumnMetadata().Init(fb_dataframe.Metadata(i)) for i in range(fb_dataframe.MetadataLength())]
+    metadata = [ColumnMetadata.ColumnMetadata().Init(fb_dataframe.Metadata(i)) for i in range(Dataframe.MetadataLength())]
 
     # Extract column names and types
     column_names = [metadata[i].Name().decode('utf-8') for i in range(len(metadata))]
