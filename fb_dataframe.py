@@ -9,6 +9,23 @@ import numpy as np
 
 import CS598.DataFrame as DataFrame
 
+namespace = "Dataframe"
+
+# Define the data type enum
+data_type_enum = flatbuffers.Enum(('Int64', 'Float', 'String'), namespace)
+
+# Define the table for ColumnMetadata
+column_metadata_table = flatbuffers.Table()
+column_metadata_table.Add('name', flatbuffers.String())
+column_metadata_table.Add('dtype', data_type_enum)
+
+# Define the table for Column
+column_table = flatbuffers.Table()
+column_table.Add('dtype', data_type_enum)
+column_table.Add('int64_data', flatbuffers.VectorInt64([]))
+column_table.Add('float_data', flatbuffers.VectorFloat([]))
+column_table.Add('string_data', flatbuffers.Vector())
+
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
     Converts a DataFrame to a flatbuffer. Returns the bytearray of the flatbuffer.
@@ -42,25 +59,24 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
         else:
             string_data_offset = builder.CreateNumpyVector([builder.CreateString(str(val)) for val in column_data.values])
 
-        Column.ColumnStart(builder)
-        Column.ColumnAddName(builder, column_name_offset)
-        Column.ColumnAddDataType(builder, data_type)
+        column_table.Reset()
+        column_table.Add('dtype', data_type)
         if int_data_offset:
-            Column.ColumnAddIntData(builder, int_data_offset)
+            column_table.Add('int64_data', int_data_offset)
         elif float_data_offset:
-            Column.ColumnAddFloatData(builder, float_data_offset)
+            column_table.Add('float_data', float_data_offset)
         elif string_data_offset:
-            Column.ColumnAddStringData(builder, string_data_offset)
-        column_offsets.append(Column.ColumnEnd(builder))
+            column_table.Add('string_data', string_data_offset)
+        column_offsets.append(column_table)
 
     DataFrame.DataFrameStartColumnsVector(builder, len(column_offsets))
     for offset in reversed(column_offsets):
         builder.PrependUOffsetTRelative(offset)
     columns_offset = builder.EndVector(len(column_offsets))
 
-    DataFrameStart(builder)
-    DataFrameAddColumns(builder, columns_offset)
-    df_offset = DataFrameEnd(builder)
+    DataFrame.DataFrameStart(builder)
+    DataFrame.DataFrameAddMetadata(builder, columns_offset)  # Assuming metadata corresponds to column definitions
+    df_offset = DataFrame.DataFrameEnd(builder)
 
     builder.Finish(df_offset)
     return bytearray(builder.Output())  # REPLACE THIS WITH YOUR CODE...
