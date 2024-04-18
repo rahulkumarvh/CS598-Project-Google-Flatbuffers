@@ -76,7 +76,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     Returns the first n rows of the Flatbuffer Dataframe as a Pandas Dataframe
     similar to df.head(). If there are less than n rows, return the entire Dataframe.
     """
-    df = Dataframe.Dataframe.GetRootAs(fb_bytes, 0)
+    df = Dataframe.GetRootAs(fb_bytes, 0)
 
     columns = []
     for i in range(df.ColumnsLength()):
@@ -98,7 +98,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     Applies GROUP BY SUM operation on the flatbuffer dataframe grouping by grouping_col_name
     and summing sum_col_name. Returns the aggregate result as a Pandas dataframe.
     """
-    df = Dataframe.Dataframe.GetRootAs(fb_bytes, 0)
+    df = Dataframe.GetRootAs(fb_bytes, 0)
 
     # Find the column indexes for grouping and summing
     grouping_col_idx = None
