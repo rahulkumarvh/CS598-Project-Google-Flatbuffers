@@ -1,2 +1,18 @@
 // Schema for dataframe encoding.
 // Your code here...
+
+namespace CS598;
+
+table Column {
+  name:string;
+  data_type:ubyte;  // 0 = int64, 1 = float64, 2 = string
+  int_data:[int64];
+  float_data:[float];
+  string_data:[ubyte];
+}
+
+table DataFrame {
+  columns:[Column] (required);
+}
+
+root_type DataFrame;
