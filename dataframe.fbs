@@ -12,7 +12,8 @@ table Column {
 }
 
 table DataFrame {
-  columns:[Column] (required);
+  columns:[Column];
 }
 
 root_type DataFrame;
+

@@ -7,7 +7,7 @@ import numpy as np
 
 # Your Flatbuffer imports here (i.e. the files generated from running ./flatc with your Flatbuffer definition)...
 
-import CS598.DataFrame as fbDataFrame
+from CS598 import DataFrame as fbDataFrame, Column as Column
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     builder = flatbuffers.Builder(0)
