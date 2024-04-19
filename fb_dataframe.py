@@ -2,10 +2,10 @@ import pandas as pd
 from typing import Callable, Any
 import flatbuffers
 
-import 598.Dataframe
-import 598.ColumnMetadata
-import 598.Column
-import 598.DataType
+import CSCS598.Dataframe
+import CSCS598.ColumnMetadata
+import CSCS598.Column
+import CSCS598.DataType
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
@@ -23,54 +23,54 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_dtype in df.dtypes.iteritems():
         name = builder.CreateString(col_name)
         if col_dtype == 'int64':
-            dtype = 598.DataType.Int64
+            dtype = CSCS598.DataType.Int64
         elif col_dtype == 'float64':
-            dtype = 598.DataType.Float
+            dtype = CSCS598.DataType.Float
         else:
-            dtype = 598.DataType.String
-        598.ColumnMetadata.ColumnMetadataStart(builder)
-        598.ColumnMetadata.ColumnMetadataAddName(builder, name)
-        598.ColumnMetadata.ColumnMetadataAddDtype(builder, dtype)
-        598.column_metadata.append(598.ColumnMetadata.ColumnMetadataEnd(builder))
+            dtype = CS598.DataType.String
+        CS598.ColumnMetadata.ColumnMetadataStart(builder)
+        CS598.ColumnMetadata.ColumnMetadataAddName(builder, name)
+        CS598.ColumnMetadata.ColumnMetadataAddDtype(builder, dtype)
+        CS598.column_metadata.append(CS598.ColumnMetadata.ColumnMetadataEnd(builder))
 
     # Create columns
     columns = []
     for col_name, col_data in df.iteritems():
         col_dtype = df[col_name].dtype
-        598.Column.ColumnStart(builder)
+        CS598.Column.ColumnStart(builder)
         if col_dtype == 'int64':
-            598.Column.ColumnAddDtype(builder, 598.DataType.Int64)
+            CS598.Column.ColumnAddDtype(builder, CS598.DataType.Int64)
             int_data = builder.CreateNumpyVector(col_data.values)
-            598.Column.ColumnAddInt64Data(builder, int_data)
+            CS598.Column.ColumnAddInt64Data(builder, int_data)
         elif col_dtype == 'float64':
-            598.Column.ColumnAddDtype(builder, 598.DataType.Float)
+            CS598.Column.ColumnAddDtype(builder, CS598.DataType.Float)
             float_data = builder.CreateNumpyVector(col_data.values)
-            598.Column.ColumnAddFloatData(builder, float_data)
+            CS598.Column.ColumnAddFloatData(builder, float_data)
         else:
-            598.Column.ColumnAddDtype(builder, 598.DataType.String)
+            CS598.Column.ColumnAddDtype(builder, CS598.DataType.String)
             string_data = [builder.CreateString(str(val)) for val in col_data.values]
-            598.Column.ColumnStartStringDataVector(builder, len(string_data))
+            CS598.Column.ColumnStartStringDataVector(builder, len(string_data))
             for s in reversed(string_data):
                 builder.PrependUOffsetTRelative(s)
             string_data = builder.EndVector(len(string_data))
-            598.Column.ColumnAddStringData(builder, string_data)
-        columns.append(598.Column.ColumnEnd(builder))
+            CS598.Column.ColumnAddStringData(builder, string_data)
+        columns.append(CS598.Column.ColumnEnd(builder))
 
     # Create Dataframe
-    598.Dataframe.DataframeStartMetadataVector(builder, len(column_metadata))
+    CS598.Dataframe.DataframeStartMetadataVector(builder, len(column_metadata))
     for meta in reversed(column_metadata):
         builder.PrependUOffsetTRelative(meta)
     metadata = builder.EndVector(len(column_metadata))
 
-    598.Dataframe.DataframeStartColumnsVector(builder, len(columns))
+    CS598.Dataframe.DataframeStartColumnsVector(builder, len(columns))
     for col in reversed(columns):
         builder.PrependUOffsetTRelative(col)
     columns_data = builder.EndVector(len(columns))
 
-    598.Dataframe.DataframeStart(builder)
-    598.Dataframe.DataframeAddMetadata(builder, metadata)
-    598.Dataframe.DataframeAddColumns(builder, columns_data)
-    df_obj = 598.Dataframe.DataframeEnd(builder)
+    CS598.Dataframe.DataframeStart(builder)
+    CS598.Dataframe.DataframeAddMetadata(builder, metadata)
+    CS598.Dataframe.DataframeAddColumns(builder, columns_data)
+    df_obj = CS598.Dataframe.DataframeEnd(builder)
     builder.Finish(df_obj)
 
     return builder.Output()
