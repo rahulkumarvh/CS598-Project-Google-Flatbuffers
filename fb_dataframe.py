@@ -77,35 +77,32 @@ def to_flatbuffer(df: pd.DataFrame) -> bytes:
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     """
-    Returns the first n rows of the Flatbuffer DataFrame as a Pandas DataFrame
-    similar to df.head(). If there are less than n rows, return the entire Dataframe.
-    Hint: don't forget the column names!
+        Returns the first n rows of the Flatbuffer Dataframe as a Pandas Dataframe
+        similar to df.head(). If there are less than n rows, return the entire Dataframe.
+        Hint: don't forget the column names!
 
-    @param fb_bytes: bytes of the Flatbuffer DataFrame.
-    @param rows: number of rows to return.
+        @param fb_bytes: bytes of the Flatbuffer Dataframe.
+        @param rows: number of rows to return.
     """
-    df = DataFrame.DataFrame.GetRootAs(fb_bytes, 0)
+    df = DataFrame.DataFrame.GetRootAs(fb_bytes,0)
+
     num_columns = df.ColumnsLength()
     data = {}
 
-    # Extract data for each column
     for i in range(num_columns):
         column = df.Columns(i)
         metadata = column.Metadata()
         col_name = metadata.Name().decode()
-        dtype = metadata.Dtype()
-
-        values = []
-
-        # Extract values based on data type
-        if dtype == DataType.DataType.Int:
+        
+        if metadata.Dtype() == DataType.DataType.Int:
             values = [column.IntValues(j) for j in range(min(rows, column.IntValuesLength()))]
-        elif dtype == DataType.DataType.Float:
+        elif metadata.Dtype() == DataType.DataType.Float:
             values = [column.FloatValues(j) for j in range(min(rows, column.FloatValuesLength()))]
-        elif dtype == DataType.DataType.String:
+        elif metadata.Dtype() == DataType.DataType.String:
             values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
+        else:
+            continue  # Skip unsupported column types
 
-        # Add values to the data dictionary
         data[col_name] = values
 
     # Construct and return a Pandas DataFrame
