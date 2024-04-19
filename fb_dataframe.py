@@ -1,6 +1,6 @@
 import pandas as pd
 import flatbuffers
-
+import types
 import MP3.Dataframe
 import MP3.ColumnMetadata
 import MP3.Column
