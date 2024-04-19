@@ -11,7 +11,7 @@ import MP3.Float64Column
 import MP3.Int64Column
 import MP3.StringColumn
 
-def to_flatbuffer(df: pd.MP3.DataFrame) -> bytearray:
+def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     builder = flatbuffers.Builder(1024)
 
     # Start serializing the dataframe
@@ -85,7 +85,7 @@ def to_flatbuffer(df: pd.MP3.DataFrame) -> bytearray:
     builder.Finish(fb_data)
     return builder.Output()
 
-def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.MP3.DataFrame:
+def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     """
         Returns the first n rows of the Flatbuffer MP3.Dataframe as a Pandas MP3.Dataframe
         similar to df.head(). If there are less than n rows, return the entire MP3.Dataframe.
@@ -94,10 +94,10 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.MP3.DataFrame:
         @param fb_bytes: bytes of the Flatbuffer MP3.Dataframe.
         @param rows: number of rows to return.
     """
-    return pd.MP3.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
 
 
-def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.MP3.DataFrame:
+def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
     """
         Applies GROUP BY SUM operation on the flatbuffer dataframe grouping by grouping_col_name
         and summing sum_col_name. Returns the aggregate result as a Pandas dataframe.
@@ -106,7 +106,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
         @param grouping_col_name: column to group by.
         @param sum_col_name: column to sum.
     """
-    return pd.MP3.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
 
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
