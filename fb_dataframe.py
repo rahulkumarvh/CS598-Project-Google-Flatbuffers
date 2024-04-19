@@ -171,15 +171,51 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
 
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
-    """
-        Apply map_func to elements in a numeric column in the Flatbuffer Dataframe in place.
-        This function shouldn't do anything if col_name doesn't exist or the specified
-        column is a string column.
+    dataframe = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
+    num_elements = dataframe.Columns(0).IntValuesLength()  # Assuming all columns have same length
+    element_size = 8  # Size of int64 or float64
 
-        @param fb_buf: buffer containing bytes of the Flatbuffer Dataframe.
-        @param col_name: name of the numeric column to apply map_func to.
-        @param map_func: function to apply to elements in the numeric column.
-    """
-    # YOUR CODE HERE...
-    pass
+    start_offset = 0
+    for i in range(dataframe.ColumnsLength()):
+        column = dataframe.Columns(i)
+        metadata = column.Metadata()
+        col_name_fb = metadata.Name().decode()
+        dtype = metadata.Dtype()
+
+        if col_name_fb == col_name:
+            if dtype == DataType.DataType.Int:
+                start_offset = dataframe.Columns(i).IntValues(0).value  # Int values
+            elif dtype == DataType.DataType.Float:
+                start_offset = dataframe.Columns(i).FloatValues(0).value  # Float values
+            else:
+                return  # Not a numeric column, do nothing
+
+    if start_offset == 0:
+        return  # Column not found or not numeric
+
+    for i in range(num_elements):
+        offset = start_offset + i * element_size
+        if dtype == DataType.DataType.Int:
+            original_value = int.from_bytes(fb_buf[offset:offset + element_size], 'little', signed=True)
+        elif dtype == DataType.DataType.Float:
+            original_value = struct.unpack_from('<d', fb_buf, offset)[0]
+
+        modified_value = map_func(original_value)
+
+        if dtype == DataType.DataType.Int:
+            fb_buf[offset:offset + element_size] = modified_value.to_bytes(element_size, 'little', signed=True)
+        elif dtype == DataType.DataType.Float:
+            struct.pack_into('<d', fb_buf, offset, modified_value)
+
+        if dtype == DataType.DataType.Int:
+            original_value = int.from_bytes(fb_buf[offset:offset + element_size], 'little', signed=True)
+        elif dtype == DataType.DataType.Float:
+            original_value = struct.unpack_from('<d', fb_buf, offset)[0]
+
+        modified_value = map_func(original_value)
+
+        if dtype == DataType.DataType.Int:
+            fb_buf[offset:offset + element_size] = modified_value.to_bytes(element_size, 'little', signed=True)
+        elif dtype == DataType.DataType.Float:
+            struct.pack_into('<d', fb_buf, offset, modified_value)
     
