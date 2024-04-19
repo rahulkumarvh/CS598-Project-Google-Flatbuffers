@@ -169,7 +169,6 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     result_df = temp_df.groupby(grouping_col_name).agg({sum_col_name: 'sum'})
     return result_df
 
-
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
     dataframe = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
     num_elements = dataframe.Columns(0).IntValuesLength()  # Assuming all columns have same length
@@ -206,16 +205,3 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
             fb_buf[offset:offset + element_size] = modified_value.to_bytes(element_size, 'little', signed=True)
         elif dtype == DataType.DataType.Float:
             struct.pack_into('<d', fb_buf, offset, modified_value)
-
-        if dtype == DataType.DataType.Int:
-            original_value = int.from_bytes(fb_buf[offset:offset + element_size], 'little', signed=True)
-        elif dtype == DataType.DataType.Float:
-            original_value = struct.unpack_from('<d', fb_buf, offset)[0]
-
-        modified_value = map_func(original_value)
-
-        if dtype == DataType.DataType.Int:
-            fb_buf[offset:offset + element_size] = modified_value.to_bytes(element_size, 'little', signed=True)
-        elif dtype == DataType.DataType.Float:
-            struct.pack_into('<d', fb_buf, offset, modified_value)
-    
