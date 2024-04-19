@@ -1,10 +1,10 @@
 import pandas as pd
 import flatbuffers
 
-import CS598.Dataframe
-import CS598.ColumnMetadata
-import CS598.Column
-import CS598.DataType
+import MP3.Dataframe
+import MP3.ColumnMetadata
+import MP3.Column
+import MP3.DataType
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
@@ -22,54 +22,54 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_dtype in df.dtypes.iteritems():
         name = builder.CreateString(col_name)
         if col_dtype == 'int64':
-            dtype = CS598.DataType.Int64
+            dtype = MP3.DataType.Int64
         elif col_dtype == 'float64':
-            dtype = CS598.DataType.Float
+            dtype = MP3.DataType.Float
         else:
-            dtype = CS598.DataType.String
-        CS598.ColumnMetadata.ColumnMetadataStart(builder)
-        CS598.ColumnMetadata.ColumnMetadataAddName(builder, name)
-        CS598.ColumnMetadata.ColumnMetadataAddDtype(builder, dtype)
-        CS598.column_metadata.append(CS598.ColumnMetadata.ColumnMetadataEnd(builder))
+            dtype = MP3.DataType.String
+        MP3.ColumnMetadata.ColumnMetadataStart(builder)
+        MP3.ColumnMetadata.ColumnMetadataAddName(builder, name)
+        MP3.ColumnMetadata.ColumnMetadataAddDtype(builder, dtype)
+        column_metadata.append(MP3.ColumnMetadata.ColumnMetadataEnd(builder))
 
     # Create columns
     columns = []
     for col_name, col_data in df.iteritems():
         col_dtype = df[col_name].dtype
-        CS598.Column.ColumnStart(builder)
+        MP3.Column.ColumnStart(builder)
         if col_dtype == 'int64':
-            CS598.Column.ColumnAddDtype(builder, CS598.DataType.Int64)
+            MP3.Column.ColumnAddDtype(builder, MP3.DataType.Int64)
             int_data = builder.CreateNumpyVector(col_data.values)
-            CS598.Column.ColumnAddInt64Data(builder, int_data)
+            MP3.Column.ColumnAddInt64Data(builder, int_data)
         elif col_dtype == 'float64':
-            CS598.Column.ColumnAddDtype(builder, CS598.DataType.Float)
+            MP3.Column.ColumnAddDtype(builder, MP3.DataType.Float)
             float_data = builder.CreateNumpyVector(col_data.values)
-            CS598.Column.ColumnAddFloatData(builder, float_data)
+            MP3.Column.ColumnAddFloatData(builder, float_data)
         else:
-            CS598.Column.ColumnAddDtype(builder, CS598.DataType.String)
+            MP3.Column.ColumnAddDtype(builder, MP3.DataType.String)
             string_data = [builder.CreateString(str(val)) for val in col_data.values]
-            CS598.Column.ColumnStartStringDataVector(builder, len(string_data))
+            MP3.Column.ColumnStartStringDataVector(builder, len(string_data))
             for s in reversed(string_data):
                 builder.PrependUOffsetTRelative(s)
             string_data = builder.EndVector(len(string_data))
-            CS598.Column.ColumnAddStringData(builder, string_data)
-        columns.append(CS598.Column.ColumnEnd(builder))
+            MP3.Column.ColumnAddStringData(builder, string_data)
+        columns.append(MP3.Column.ColumnEnd(builder))
 
     # Create Dataframe
-    CS598.Dataframe.DataframeStartMetadataVector(builder, len(column_metadata))
+    MP3.Dataframe.DataframeStartMetadataVector(builder, len(column_metadata))
     for meta in reversed(column_metadata):
         builder.PrependUOffsetTRelative(meta)
     metadata = builder.EndVector(len(column_metadata))
 
-    CS598.Dataframe.DataframeStartColumnsVector(builder, len(columns))
+    MP3.Dataframe.DataframeStartColumnsVector(builder, len(columns))
     for col in reversed(columns):
         builder.PrependUOffsetTRelative(col)
     columns_data = builder.EndVector(len(columns))
 
-    CS598.Dataframe.DataframeStart(builder)
-    CS598.Dataframe.DataframeAddMetadata(builder, metadata)
-    CS598.Dataframe.DataframeAddColumns(builder, columns_data)
-    df_obj = CS598.Dataframe.DataframeEnd(builder)
+    MP3.Dataframe.DataframeStart(builder)
+    MP3.Dataframe.DataframeAddMetadata(builder, metadata)
+    MP3.Dataframe.DataframeAddColumns(builder, columns_data)
+    df_obj = MP3.Dataframe.DataframeEnd(builder)
     builder.Finish(df_obj)
 
     return builder.Output()

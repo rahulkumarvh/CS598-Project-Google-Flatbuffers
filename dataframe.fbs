@@ -1,4 +1,4 @@
-namespace CS598;
+namespace MP3;
 
 enum DataType: byte {
     Int64 = 0,
@@ -13,9 +13,9 @@ table ColumnMetadata {
 
 table Column {
     dtype: DataType;
-    int64_data: [int64];
-    float_data: [float];
-    string_data: [string];
+    int64_data: [int64] (deprecated);
+    float_data: [float] (deprecated);
+    string_data: [string] (deprecated);
 }
 
 table Dataframe {
