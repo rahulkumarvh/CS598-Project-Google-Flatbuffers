@@ -180,6 +180,10 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
         'float_col': 608 if int.from_bytes(fb_buf[472:472 + ele_size], 'little') < 10 else 248
     }
 
+    if col_name not in offsets:
+        print(f"Column name {col_name} not found.")
+        return
+
     for i in range(num_elements):
         offset = offsets[col_name] + i * ele_size
         if col_name == 'int_col':
