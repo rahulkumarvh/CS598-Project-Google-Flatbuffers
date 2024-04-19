@@ -127,8 +127,11 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
-    df = DataFrame.DataFrame.GetRootAs(fb_bytes, 0)
+    df = DataFrame.DataFrame.GetRootAs(fb_bytes,0)
     num_columns = df.ColumnsLength()
+    data = {}
+
+    # Variables to hold column data for group by and sum operations
     grouping_data = None
     summing_data = None
 
@@ -151,6 +154,9 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
             elif metadata.Dtype() == DataType.DataType.Float:
                 summing_data = [column.FloatValues(j) for j in range(column.FloatValuesLength())]
 
+        if grouping_data and summing_data:
+            break
+
     if grouping_data is None or summing_data is None:
         raise ValueError("Grouping column or summing column not found")
 
@@ -164,6 +170,15 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     return result_df
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
+    """
+    Apply map_func to elements in a numeric column in the Flatbuffer Dataframe in place.
+    This function shouldn't do anything if col_name doesn't exist or the specified
+    column is a string column.
+
+    @param fb_buf: buffer containing bytes of the Flatbuffer Dataframe.
+    @param col_name: name of the numeric column to apply map_func to.
+    @param map_func: function to apply to elements in the numeric column.
+    """
     dataframe = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
     num_columns = dataframe.ColumnsLength()
 
@@ -174,11 +189,18 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
 
         if col_name_fb == col_name:
             dtype = metadata.Dtype()
-            if dtype in [DataType.DataType.Int, DataType.DataType.Float]:
-                for j in range(column.IntValuesLength()):
-                    value = column.IntValues(j) if dtype == DataType.DataType.Int else column.FloatValues(j)
-                    new_value = map_func(value)
-                    if dtype == DataType.DataType.Int:
-                        column.SetIntValues(j, new_value)
-                    else:
-                        column.SetFloatValues(j, new_value)
+            if dtype in [DataFrame.DataType.Int, DataFrame.DataType.Float]:
+                num_elements = column.IntValuesLength() if dtype == DataFrame.DataType.Int else column.FloatValuesLength()
+                element_size = 8 if dtype == DataFrame.DataType.Int else 4
+
+                for j in range(num_elements):
+                    if dtype == DataFrame.DataType.Int:
+                        offset = column.IntValues(j)
+                        original_value = int.from_bytes(fb_buf[offset:offset + element_size], 'little', signed=True)
+                        modified_value = map_func(original_value)
+                        fb_buf[offset:offset + element_size] = modified_value.to_bytes(element_size, 'little', signed=True)
+                    elif dtype == DataFrame.DataType.Float:
+                        offset = column.FloatValues(j)
+                        original_value = struct.unpack_from('<f', fb_buf, offset)[0]
+                        modified_value = map_func(original_value)
+                        struct.pack_into('<f', fb_buf, offset, modified_value)
