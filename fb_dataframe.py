@@ -170,7 +170,6 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     return result_df
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
-
     dataframe = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
     num_columns = dataframe.ColumnsLength()
 
@@ -181,11 +180,11 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
 
         if col_name_fb == col_name:
             dtype = metadata.Dtype()
-            if dtype == DataFrame.DataType.Int or dtype == DataFrame.DataType.Float:
-                for j in range(column.IntValuesLength() if dtype == DataFrame.DataType.Int else column.FloatValuesLength()):
-                    value = column.IntValues(j) if dtype == DataFrame.DataType.Int else column.FloatValues(j)
+            if dtype in [DataType.DataType.Int, DataType.DataType.Float]:
+                for j in range(column.IntValuesLength()):
+                    value = column.IntValues(j) if dtype == DataType.DataType.Int else column.FloatValues(j)
                     new_value = map_func(value)
-                    if dtype == DataFrame.DataType.Int:
+                    if dtype == DataType.DataType.Int:
                         column.IntValues(j, new_value)
                     else:
                         column.FloatValues(j, new_value)
