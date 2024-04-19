@@ -3,6 +3,6 @@
 # namespace: CS598
 
 class DataType(object):
-    Int64 = 0
+    Int = 0
     Float = 1
     String = 2
