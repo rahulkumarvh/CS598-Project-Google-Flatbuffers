@@ -11,6 +11,7 @@ import MP3.Float64Column
 import MP3.Int64Column
 import MP3.StringColumn
 
+
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     builder = flatbuffers.Builder(1024)
 
@@ -60,13 +61,13 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
             columns.append(col_offset)
         elif col_type == 'object':
             data = [builder.CreateString(str(val)) for val in col_data.values]
-            StringColumn.StringColumnStartDataVector(builder, len(data))
+            MP3.StringColumn.StringColumnStartDataVector(builder, len(data))
             for val in reversed(data):  # Reversed for efficiency
                 builder.PrependUOffsetTRelative(val)
             col_data_offset = builder.EndVector(len(data))
-            StringColumn.StringColumnStart(builder)
-            StringColumn.StringColumnAddData(builder, col_data_offset)
-            str_col = StringColumn.StringColumnEnd(builder)
+            MP3.StringColumn.StringColumnStart(builder)
+            MP3.StringColumn.StringColumnAddData(builder, col_data_offset)
+            str_col = MP3.StringColumn.StringColumnEnd(builder)
             MP3.Column.ColumnStart(builder)
             MP3.Column.ColumnAddMeta(builder, col_meta_offset)
             MP3.Column.ColumnAddStringCol(builder, str_col)
