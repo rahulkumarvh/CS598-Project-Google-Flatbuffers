@@ -6,7 +6,7 @@ import types
 from CS598 import DataFrame
 from CS598 import Column
 from CS598 import Metadata
-from CS598 import DataType  # Updated import
+from CS598 import DataType  
 
 def to_flatbuffer(df: pd.DataFrame) -> bytes:
     builder = flatbuffers.Builder(1024)
