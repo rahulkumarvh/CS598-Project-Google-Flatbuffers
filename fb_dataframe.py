@@ -23,9 +23,9 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     for col_name, col_dtype in df.dtypes.iteritems():
         name = builder.CreateString(col_name)
         if col_dtype == 'int64':
-            dtype = CSCS598.DataType.Int64
+            dtype = CS598.DataType.Int64
         elif col_dtype == 'float64':
-            dtype = CSCS598.DataType.Float
+            dtype = CS598.DataType.Float
         else:
             dtype = CS598.DataType.String
         CS598.ColumnMetadata.ColumnMetadataStart(builder)
