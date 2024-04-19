@@ -84,14 +84,14 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
         @param fb_bytes: bytes of the Flatbuffer Dataframe.
         @param rows: number of rows to return.
     """
-    df = DataFrame.DataFrame.GetRootAs(fb_bytes,0)
+    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes,0)
 
     num_columns = df.ColumnsLength()
     data = {}
 
     for i in range(num_columns):
         column = df.Columns(i)
-        metadata = column.Metadata()
+        metadata = column.Meta()
         col_name = metadata.Name().decode()
         
         if metadata.Dtype() == DataType.DataType.Int:
@@ -109,7 +109,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
-    df = DataFrame.GetRootAs(fb_bytes, 0)
+    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
     num_columns = df.ColumnsLength()
     data = {}
 
