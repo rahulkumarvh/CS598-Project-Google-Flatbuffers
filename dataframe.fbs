@@ -1,32 +1,27 @@
-namespace MP3;
+// Schema for dataframe encoding.
+// Your code here...
 
-table ColumnMeta {
-    name: string;    // Column name
-    type: string;    // Data type (int64, float64, object)
-    size: int;       // Number of elements in the column
-}
+namespace DataFrame; 
 
-table Int64Column {
-    data: [int];     // Int64 column data
-}
+enum ValueType: byte { Int, Float, String } 
 
-table Float64Column {
-    data: [float];   // Float64 column data
-}
+table Metadata { 
+    name: string; 
+    dtype: ValueType; 
+} 
 
-table StringColumn {
-    data: [string];  // String column data
-}
+table Column { 
+    metadata: Metadata; 
+    int_values: [int64]; 
+    float_values: [float64]; 
+    string_values: [string]; 
+} 
 
-table Column {
-    meta: ColumnMeta;  // Column metadata
-    int64_col: Int64Column;
-    float64_col: Float64Column;
-    string_col: StringColumn;
-}
+table DataFrame { 
+    metadata: string; 
+    columns: [Column]; 
+} 
 
-table DataFrame {
-    cols: [Column];  // List of columns in the DataFrame
-}
-
-root_type DataFrame;
+root_type DataFrame; 
+//Not using union because vector of union not possible 
+//Here the values which I sont set will not be serialized
