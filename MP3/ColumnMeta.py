@@ -6,58 +6,71 @@ import flatbuffers
 from flatbuffers.compat import import_numpy
 np = import_numpy()
 
-class ColumnMetadata(object):
+class ColumnMeta(object):
     __slots__ = ['_tab']
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
-        x = ColumnMetadata()
+        x = ColumnMeta()
         x.Init(buf, n + offset)
         return x
 
     @classmethod
-    def GetRootAsColumnMetadata(cls, buf, offset=0):
+    def GetRootAsColumnMeta(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
-    # ColumnMetadata
+    # ColumnMeta
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-    # ColumnMetadata
+    # ColumnMeta
     def Name(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.String(o + self._tab.Pos)
         return None
 
-    # ColumnMetadata
-    def Dtype(self):
+    # ColumnMeta
+    def Type(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
+            return self._tab.String(o + self._tab.Pos)
+        return None
+
+    # ColumnMeta
+    def Size(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
-def ColumnMetadataStart(builder):
-    builder.StartObject(2)
+def ColumnMetaStart(builder):
+    builder.StartObject(3)
 
 def Start(builder):
-    ColumnMetadataStart(builder)
+    ColumnMetaStart(builder)
 
-def ColumnMetadataAddName(builder, name):
+def ColumnMetaAddName(builder, name):
     builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
 
 def AddName(builder, name):
-    ColumnMetadataAddName(builder, name)
+    ColumnMetaAddName(builder, name)
 
-def ColumnMetadataAddDtype(builder, dtype):
-    builder.PrependInt8Slot(1, dtype, 0)
+def ColumnMetaAddType(builder, type):
+    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(type), 0)
 
-def AddDtype(builder, dtype):
-    ColumnMetadataAddDtype(builder, dtype)
+def AddType(builder, type):
+    ColumnMetaAddType(builder, type)
 
-def ColumnMetadataEnd(builder):
+def ColumnMetaAddSize(builder, size):
+    builder.PrependInt32Slot(2, size, 0)
+
+def AddSize(builder, size):
+    ColumnMetaAddSize(builder, size)
+
+def ColumnMetaEnd(builder):
     return builder.EndObject()
 
 def End(builder):
-    return ColumnMetadataEnd(builder)
+    return ColumnMetaEnd(builder)

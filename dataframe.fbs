@@ -1,26 +1,32 @@
 namespace MP3;
 
-enum DataType: byte {
-    Int64 = 0,
-    Float = 1,
-    String = 2
+table ColumnMeta {
+    name: string;    // Column name
+    type: string;    // Data type (int64, float64, object)
+    size: int;       // Number of elements in the column
 }
 
-table ColumnMetadata {
-    name: string;
-    dtype: DataType;
+table Int64Column {
+    data: [int];     // Int64 column data
+}
+
+table Float64Column {
+    data: [float];   // Float64 column data
+}
+
+table StringColumn {
+    data: [string];  // String column data
 }
 
 table Column {
-    dtype: DataType;
-    int64_data: [int64] (deprecated);
-    float_data: [float] (deprecated);
-    string_data: [string] (deprecated);
+    meta: ColumnMeta;  // Column metadata
+    int64_col: Int64Column;
+    float64_col: Float64Column;
+    string_col: StringColumn;
 }
 
-table Dataframe {
-    metadata: [ColumnMetadata];
-    columns: [Column];
+table DataFrame {
+    cols: [Column];  // List of columns in the DataFrame
 }
 
-root_type Dataframe;
+root_type DataFrame;

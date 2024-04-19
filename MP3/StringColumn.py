@@ -6,69 +6,64 @@ import flatbuffers
 from flatbuffers.compat import import_numpy
 np = import_numpy()
 
-class DataFrame(object):
+class StringColumn(object):
     __slots__ = ['_tab']
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
-        x = DataFrame()
+        x = StringColumn()
         x.Init(buf, n + offset)
         return x
 
     @classmethod
-    def GetRootAsDataFrame(cls, buf, offset=0):
+    def GetRootAsStringColumn(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
-    # DataFrame
+    # StringColumn
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-    # DataFrame
-    def Cols(self, j):
+    # StringColumn
+    def Data(self, j):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            x = self._tab.Vector(o)
-            x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * 4
-            x = self._tab.Indirect(x)
-            from MP3.Column import Column
-            obj = Column()
-            obj.Init(self._tab.Bytes, x)
-            return obj
-        return None
+            a = self._tab.Vector(o)
+            return self._tab.String(a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+        return ""
 
-    # DataFrame
-    def ColsLength(self):
+    # StringColumn
+    def DataLength(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
-    # DataFrame
-    def ColsIsNone(self):
+    # StringColumn
+    def DataIsNone(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
-def DataFrameStart(builder):
+def StringColumnStart(builder):
     builder.StartObject(1)
 
 def Start(builder):
-    DataFrameStart(builder)
+    StringColumnStart(builder)
 
-def DataFrameAddCols(builder, cols):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(cols), 0)
+def StringColumnAddData(builder, data):
+    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(data), 0)
 
-def AddCols(builder, cols):
-    DataFrameAddCols(builder, cols)
+def AddData(builder, data):
+    StringColumnAddData(builder, data)
 
-def DataFrameStartColsVector(builder, numElems):
+def StringColumnStartDataVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
 
-def StartColsVector(builder, numElems):
-    return DataFrameStartColsVector(builder, numElems)
+def StartDataVector(builder, numElems):
+    return StringColumnStartDataVector(builder, numElems)
 
-def DataFrameEnd(builder):
+def StringColumnEnd(builder):
     return builder.EndObject()
 
 def End(builder):
-    return DataFrameEnd(builder)
+    return StringColumnEnd(builder)

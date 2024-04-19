@@ -25,11 +25,48 @@ class Column(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
     # Column
-    def Dtype(self):
+    def Meta(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
-        return 0
+            x = self._tab.Indirect(o + self._tab.Pos)
+            from MP3.ColumnMeta import ColumnMeta
+            obj = ColumnMeta()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # Column
+    def Int64Col(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
+        if o != 0:
+            x = self._tab.Indirect(o + self._tab.Pos)
+            from MP3.Int64Column import Int64Column
+            obj = Int64Column()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # Column
+    def Float64Col(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
+        if o != 0:
+            x = self._tab.Indirect(o + self._tab.Pos)
+            from MP3.Float64Column import Float64Column
+            obj = Float64Column()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # Column
+    def StringCol(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
+        if o != 0:
+            x = self._tab.Indirect(o + self._tab.Pos)
+            from MP3.StringColumn import StringColumn
+            obj = StringColumn()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
 
 def ColumnStart(builder):
     builder.StartObject(4)
@@ -37,11 +74,29 @@ def ColumnStart(builder):
 def Start(builder):
     ColumnStart(builder)
 
-def ColumnAddDtype(builder, dtype):
-    builder.PrependInt8Slot(0, dtype, 0)
+def ColumnAddMeta(builder, meta):
+    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(meta), 0)
 
-def AddDtype(builder, dtype):
-    ColumnAddDtype(builder, dtype)
+def AddMeta(builder, meta):
+    ColumnAddMeta(builder, meta)
+
+def ColumnAddInt64Col(builder, int64Col):
+    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(int64Col), 0)
+
+def AddInt64Col(builder, int64Col):
+    ColumnAddInt64Col(builder, int64Col)
+
+def ColumnAddFloat64Col(builder, float64Col):
+    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(float64Col), 0)
+
+def AddFloat64Col(builder, float64Col):
+    ColumnAddFloat64Col(builder, float64Col)
+
+def ColumnAddStringCol(builder, stringCol):
+    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(stringCol), 0)
+
+def AddStringCol(builder, stringCol):
+    ColumnAddStringCol(builder, stringCol)
 
 def ColumnEnd(builder):
     return builder.EndObject()

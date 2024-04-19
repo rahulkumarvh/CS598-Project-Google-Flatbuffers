@@ -1,88 +1,91 @@
-import pandas as pd
-import flatbuffers
-import types
-import MP3.Dataframe
-import MP3.ColumnMetadata
-import MP3.Column
-import MP3.DataType
-
 import flatbuffers
 import pandas as pd
 import struct
 import time
 import types
 
-# Import the Flatbuffer definitions
+import MP3.Column
+import MP3.ColumnMeta
+import MP3.DataFrame
+import MP3.Float64Column
+import MP3.Int64Column
+import MP3.StringColumn
 
-def to_flatbuffer(df: pd.DataFrame) -> bytearray:
-    # Initialize the Flatbuffer builder
-    builder = flatbuffers.Builder(0)
+def to_flatbuffer(df: pd.MP3.DataFrame) -> bytearray:
+    builder = flatbuffers.Builder(1024)
 
-    # Create a list to hold the column offsets
-    column_offsets = []
+    # Start serializing the dataframe
+    columns = []
+    for col_name, col_data in df.items():
+        # For each column, serialize the metadata
+        col_meta = builder.CreateString(col_name)  # MP3.Column name as metadata
+        col_type = col_data.dtype  # Data type of the column
+        col_size = len(col_data)  # Number of elements in the column
 
-    # Iterate over the columns in the DataFrame
-    for column_name, series in df.items():
-        # Create the column name
-        name_offset = builder.CreateString(column_name)
+        # Serialize metadata
+        MP3.ColumnMeta.ColumnMetaStart(builder)
+        MP3.ColumnMeta.ColumnMetaAddName(builder, col_meta)
+        MP3.ColumnMeta.ColumnMetaAddType(builder, col_type)
+        MP3.ColumnMeta.ColumnMetaAddSize(builder, col_size)
+        col_meta_offset = MP3.ColumnMeta.ColumnMetaEnd(builder)
 
-        # Create a list to hold the value offsets
-        value_offsets = []
+        # Serialize column values based on type
+        if col_type == 'int64':
+            data = col_data.values.tolist()
+            MP3.Int64Column.Int64ColumnStartDataVector(builder, len(data))
+            for val in reversed(data):  # Reversed for efficiency
+                builder.PrependInt64(val)
+            col_data_offset = builder.EndVector(len(data))
+            MP3.Int64Column.Int64ColumnStart(builder)
+            MP3.Int64Column.Int64ColumnAddData(builder, col_data_offset)
+            int64_col = MP3.Int64Column.Int64ColumnEnd(builder)
+            MP3.Column.ColumnStart(builder)
+            MP3.Column.ColumnAddMeta(builder, col_meta_offset)
+            MP3.Column.ColumnAddInt64Col(builder, int64_col)
+            col_offset = MP3.Column.ColumnEnd(builder)
+            columns.append(col_offset)
+        elif col_type == 'float64':
+            data = col_data.values.tolist()
+            MP3.Float64Column.Float64ColumnStartDataVector(builder, len(data))
+            for val in reversed(data):  # Reversed for efficiency
+                builder.PrependFloat64(val)
+            col_data_offset = builder.EndVector(len(data))
+            MP3.Float64Column.Float64ColumnStart(builder)
+            MP3.Float64Column.Float64ColumnAddData(builder, col_data_offset)
+            float64_col = MP3.Float64Column.Float64ColumnEnd(builder)
+            MP3.Column.ColumnStart(builder)
+            MP3.Column.ColumnAddMeta(builder, col_meta_offset)
+            MP3.Column.ColumnAddFloat64Col(builder, float64_col)
+            col_offset = MP3.Column.ColumnEnd(builder)
+            columns.append(col_offset)
+        elif col_type == 'object':
+            data = [builder.CreateString(str(val)) for val in col_data.values]
+            StringColumn.StringColumnStartDataVector(builder, len(data))
+            for val in reversed(data):  # Reversed for efficiency
+                builder.PrependUOffsetTRelative(val)
+            col_data_offset = builder.EndVector(len(data))
+            StringColumn.StringColumnStart(builder)
+            StringColumn.StringColumnAddData(builder, col_data_offset)
+            str_col = StringColumn.StringColumnEnd(builder)
+            MP3.Column.ColumnStart(builder)
+            MP3.Column.ColumnAddMeta(builder, col_meta_offset)
+            MP3.Column.ColumnAddStringCol(builder, str_col)
+            col_offset = MP3.Column.ColumnEnd(builder)
+            columns.append(col_offset)
 
-        # Iterate over the values in the series
-        for value in series:
-            # Create the value based on its type
-            if pd.api.types.is_string_dtype(series):
-                value_offset = builder.CreateString(value)
-                value_offsets.append(value_offset)
-            elif pd.api.types.is_integer_dtype(series):
-                value_offset = builder.PrependInt64(value)
-                value_offsets.append(value_offset)
-            elif pd.api.types.is_float_dtype(series):
-                value_offset = builder.PrependFloat64(value)
-                value_offsets.append(value_offset)
+    # Serialize the dataframe
+    MP3.DataFrame.DataFrameStartColsVector(builder, len(columns))
+    for col_offset in reversed(columns):  # Reversed for efficiency
+        builder.PrependUOffsetTRelative(col_offset)
+    cols_vector = builder.EndVector(len(columns))
+    MP3.DataFrame.DataFrameStart(builder)
+    MP3.DataFrame.DataFrameAddCols(builder, cols_vector)
+    fb_data = MP3.DataFrame.DataFrameEnd(builder)
 
-        # Create the values vector
-
-        for value_offset in reversed(value_offsets):
-            builder.PrependUOffsetTRelative(value_offset)
-        values_offset = builder.EndVector(len(value_offsets))
-
-        # Create the column
-        MP3.Dataframe.ColumnStart(builder)
-        MP3.Dataframe.ColumnAddName(builder, name_offset)
-        if pd.api.types.is_string_dtype(series):
-            MP3.Dataframe.ColumnAddStringData(builder, values_offset)
-            MP3.Dataframe.ColumnAddDtype(builder, MP3.Dataframe.DataType.String)
-        elif pd.api.types.is_integer_dtype(series):
-            MP3.Dataframe.ColumnAddInt64Data(builder, values_offset)
-            MP3.Dataframe.ColumnAddDtype(builder, MP3.Dataframe.DataType.Int64)
-        elif pd.api.types.is_float_dtype(series):
-            MP3.Dataframe.ColumnAddFloatData(builder, values_offset)
-            MP3.Dataframe.ColumnAddDtype(builder, MP3.Dataframe.DataType.Float)
-        column_offset = MP3.Dataframe.ColumnEnd(builder)
-
-        # Add the column offset to the list
-        column_offsets.append(column_offset)
-
-    # Create the columns vector
-    MP3.Dataframe.DataframeStartColumnsVector(builder, len(column_offsets))
-    for column_offset in reversed(column_offsets):
-        builder.PrependUOffsetTRelative(column_offset)
-    columns_offset = builder.EndVector(len(column_offsets))
-
-    # Create the DataFrame
-    MP3.Dataframe.DataframeStart(builder)
-    MP3.Dataframe.DataframeAddColumns(builder, columns_offset)
-    dataframe_offset = MP3.Dataframe.DataframeEnd(builder)
-
-    # Finish the Flatbuffer
-    builder.Finish(dataframe_offset)
-
-    # Return the bytearray of the Flatbuffer
+    builder.Finish(fb_data)
     return builder.Output()
 
-def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
+def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.MP3.DataFrame:
     """
         Returns the first n rows of the Flatbuffer MP3.Dataframe as a Pandas MP3.Dataframe
         similar to df.head(). If there are less than n rows, return the entire MP3.Dataframe.
@@ -91,10 +94,10 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
         @param fb_bytes: bytes of the Flatbuffer MP3.Dataframe.
         @param rows: number of rows to return.
     """
-    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+    return pd.MP3.DataFrame()  # REPLACE THIS WITH YOUR CODE...
 
 
-def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
+def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.MP3.DataFrame:
     """
         Applies GROUP BY SUM operation on the flatbuffer dataframe grouping by grouping_col_name
         and summing sum_col_name. Returns the aggregate result as a Pandas dataframe.
@@ -103,7 +106,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
         @param grouping_col_name: column to group by.
         @param sum_col_name: column to sum.
     """
-    return pd.DataFrame()  # REPLACE THIS WITH YOUR CODE...
+    return pd.MP3.DataFrame()  # REPLACE THIS WITH YOUR CODE...
 
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
