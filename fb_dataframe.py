@@ -3,10 +3,10 @@ import pandas as pd
 import struct
 import time
 import types
-from DataFrame import DataFrame
-from DataFrame import Column
-from DataFrame import Metadata
-from DataFrame import DataType  # Updated import
+from CS598 import DataFrame
+from CS598 import Column
+from CS598 import Metadata
+from CS598 import DataType  # Updated import
 
 def to_flatbuffer(df: pd.DataFrame) -> bytes:
     builder = flatbuffers.Builder(1024)
