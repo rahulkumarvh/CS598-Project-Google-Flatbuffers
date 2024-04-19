@@ -1,5 +1,4 @@
 import pandas as pd
-from typing import Callable, Any
 import flatbuffers
 
 import CS598.Dataframe
