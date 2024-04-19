@@ -98,11 +98,11 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
         values = []
 
         # Extract values based on data type
-        if dtype == CS598.DataType.Int:
+        if dtype == DataType.DataType.Int:
             values = [column.IntValues(j) for j in range(min(rows, column.IntValuesLength()))]
-        elif dtype == CS598.DataType.Float:
+        elif dtype == DataType.DataType.Float:
             values = [column.FloatValues(j) for j in range(min(rows, column.FloatValuesLength()))]
-        elif dtype == CS598.DataType.String:
+        elif dtype == DataType.DataType.String:
             values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
 
         # Add values to the data dictionary
