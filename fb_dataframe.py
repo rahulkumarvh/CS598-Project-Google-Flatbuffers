@@ -170,20 +170,19 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     return result_df
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
-    dataf = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
-    num_elements = dataf.Columns(0).IntValuesLength()  # Get number of elements
-    ele_size = 8
 
+    dataf = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
+    num_elements = dataf.Columns(0).IntValuesLength() # Get number of elements
+    ele_size = 8
     if(int.from_bytes(fb_buf[472:472 + ele_size], 'little')<10):
         start_offset_int = 472
         start_offset_float = 608
     else:
         start_offset_int = 112
         start_offset_float = 248
-
-    i = 0
-    while i < num_elements:
+    for i in range(num_elements):
         if col_name == 'int_col':
+
             offset = start_offset_int + i * ele_size
             org_value = int.from_bytes(fb_buf[offset:offset + ele_size], 'little')
             print(org_value)
@@ -191,10 +190,9 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
             print(modified_value)
             fb_buf[offset:offset + ele_size] = modified_value.to_bytes(ele_size, 'little', signed=True)
         elif col_name == 'float_col':
+        
             offset = start_offset_float + i * ele_size
             original_value = struct.unpack_from('<d', fb_buf, offset)[0]
             modified_value = map_func(original_value)
             struct.pack_into('<d', fb_buf, offset, modified_value)
-        i += 1
-
     
