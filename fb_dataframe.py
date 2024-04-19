@@ -19,7 +19,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
 
     # Create column metadata
     column_metadata = []
-    for col_name, col_dtype in df.dtypes.iteritems():
+    for col_name, col_dtype in df.dtypes.items():
         name = builder.CreateString(col_name)
         if col_dtype == 'int64':
             dtype = MP3.DataType.Int64
@@ -34,7 +34,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
 
     # Create columns
     columns = []
-    for col_name, col_data in df.iteritems():
+    for col_name, col_data in df.items():
         col_dtype = df[col_name].dtype
         MP3.Column.ColumnStart(builder)
         if col_dtype == 'int64':
