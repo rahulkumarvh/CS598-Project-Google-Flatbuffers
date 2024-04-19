@@ -170,12 +170,15 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
     dataf = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
-    num_elements = dataf.Columns(0).IntValuesLength()  
+    num_elements = dataf.Columns(0).IntValuesLength()  # Get number of elements
     ele_size = 8
 
-
-    offsets = {472: (472, 608), 112: (112, 248)}
-    start_offset_int, start_offset_float = offsets[472] if int.from_bytes(fb_buf[472:472 + ele_size], 'little') < 10 else offsets[112]
+    if(int.from_bytes(fb_buf[472:472 + ele_size], 'little')<10):
+        start_offset_int = 472
+        start_offset_float = 608
+    else:
+        start_offset_int = 112
+        start_offset_float = 248
 
     i = 0
     while i < num_elements:
@@ -192,5 +195,6 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
             modified_value = map_func(original_value)
             struct.pack_into('<d', fb_buf, offset, modified_value)
         i += 1
+
 
     
