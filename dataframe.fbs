@@ -2,13 +2,13 @@ namespace CS598;
 
 enum DataType: byte { Int, Float, String } 
 
-table Meta { 
+table Metadata { 
     name: string; 
     dtype: DataType; 
 } 
 
 table Column { 
-    metadata: Meta; 
+    metadata: Metadata; 
     int_values: [int64]; 
     float_values: [float64]; 
     string_values: [string]; 
@@ -19,4 +19,4 @@ table DataFrame {
     columns: [Column]; 
 } 
 
-root_type DataFrame; 
+root_type DataFrame;

@@ -6,58 +6,58 @@ import flatbuffers
 from flatbuffers.compat import import_numpy
 np = import_numpy()
 
-class Meta(object):
+class Metadata(object):
     __slots__ = ['_tab']
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, buf, offset)
-        x = Meta()
+        x = Metadata()
         x.Init(buf, n + offset)
         return x
 
     @classmethod
-    def GetRootAsMeta(cls, buf, offset=0):
+    def GetRootAsMetadata(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
-    # Meta
+    # Metadata
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-    # Meta
+    # Metadata
     def Name(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.String(o + self._tab.Pos)
         return None
 
-    # Meta
+    # Metadata
     def Dtype(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
-def MetaStart(builder):
+def MetadataStart(builder):
     builder.StartObject(2)
 
 def Start(builder):
-    MetaStart(builder)
+    MetadataStart(builder)
 
-def MetaAddName(builder, name):
+def MetadataAddName(builder, name):
     builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
 
 def AddName(builder, name):
-    MetaAddName(builder, name)
+    MetadataAddName(builder, name)
 
-def MetaAddDtype(builder, dtype):
+def MetadataAddDtype(builder, dtype):
     builder.PrependInt8Slot(1, dtype, 0)
 
 def AddDtype(builder, dtype):
-    MetaAddDtype(builder, dtype)
+    MetadataAddDtype(builder, dtype)
 
-def MetaEnd(builder):
+def MetadataEnd(builder):
     return builder.EndObject()
 
 def End(builder):
-    return MetaEnd(builder)
+    return MetadataEnd(builder)

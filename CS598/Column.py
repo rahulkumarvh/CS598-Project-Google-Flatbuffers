@@ -29,8 +29,8 @@ class Column(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             x = self._tab.Indirect(o + self._tab.Pos)
-            from CS598.Meta import Meta
-            obj = Meta()
+            from CS598.Metadata import Metadata
+            obj = Metadata()
             obj.Init(self._tab.Bytes, x)
             return obj
         return None
