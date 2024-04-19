@@ -98,11 +98,11 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
         values = []
 
         # Extract values based on data type
-        if dtype == DataType.Int:
+        if dtype == DataType.DataType.Int:
             values = [column.IntValues(j) for j in range(min(rows, column.IntValuesLength()))]
-        elif dtype == DataType.Float:
+        elif dtype == DataType.DataType.Float:
             values = [column.FloatValues(j) for j in range(min(rows, column.FloatValuesLength()))]
-        elif dtype == DataType.String:
+        elif dtype == DataType.DataType.String:
             values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
 
         # Add values to the data dictionary
@@ -125,17 +125,17 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
         col_name = metadata.Name().decode()
 
         if col_name == grouping_col_name:
-            if metadata.Dtype() == DataType.Int:
+            if metadata.Dtype() == DataType.DataType.Int:
                 grouping_data = [column.IntValues(j) for j in range(column.IntValuesLength())]
-            elif metadata.Dtype() == DataType.Float:
+            elif metadata.Dtype() == DataType.DataType.Float:
                 grouping_data = [column.FloatValues(j) for j in range(column.FloatValuesLength())]
-            elif metadata.Dtype() == DataType.String:
+            elif metadata.Dtype() == DataType.DataType.String:
                 grouping_data = [column.StringValues(j).decode() for j in range(column.StringValuesLength())]
 
         elif col_name == sum_col_name:
-            if metadata.Dtype() == DataType.Int:
+            if metadata.Dtype() == DataType.DataType.Int:
                 summing_data = [column.IntValues(j) for j in range(column.IntValuesLength())]
-            elif metadata.Dtype() == DataType.Float:
+            elif metadata.Dtype() == DataType.DataType.Float:
                 summing_data = [column.FloatValues(j) for j in range(column.FloatValuesLength())]
 
         if grouping_data and summing_data:
