@@ -104,6 +104,8 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
             values = [column.FloatValues(j) for j in range(min(rows, column.FloatValuesLength()))]
         elif dtype == DataType.DataType.String:
             values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
+        else:
+            continue 
 
         # Add values to the data dictionary
         data[col_name] = values
