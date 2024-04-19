@@ -76,7 +76,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytes:
     return builder.Output()
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
-    df = DataFrame.DataFrame.GetRootAs(fb_bytes, 0)
+    df = DataFrame.GetRootAs(fb_bytes, 0)
     num_columns = df.ColumnsLength()
     data = {}
 
@@ -99,7 +99,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
-    df = DataFrame.DataFrame.GetRootAs(fb_bytes, 0)
+    df = DataFrame.GetRootAs(fb_bytes, 0)
     num_columns = df.ColumnsLength()
     data = {}
 
@@ -112,17 +112,17 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
         col_name = metadata.Name().decode()
 
         if col_name == grouping_col_name:
-            if metadata.Dtype() == DataType.DataType.Int:
+            if metadata.Dtype() == DataType.Int:
                 grouping_data = [column.IntValues(j) for j in range(column.IntValuesLength())]
-            elif metadata.Dtype() == DataType.DataType.Float:
+            elif metadata.Dtype() == DataType.Float:
                 grouping_data = [column.FloatValues(j) for j in range(column.FloatValuesLength())]
-            elif metadata.Dtype() == DataType.DataType.String:
+            elif metadata.Dtype() == DataType.String:
                 grouping_data = [column.StringValues(j).decode() for j in range(column.StringValuesLength())]
 
         elif col_name == sum_col_name:
-            if metadata.Dtype() == DataType.DataType.Int:
+            if metadata.Dtype() == DataType.Int:
                 summing_data = [column.IntValues(j) for j in range(column.IntValuesLength())]
-            elif metadata.Dtype() == DataType.DataType.Float:
+            elif metadata.Dtype() == DataType.Float:
                 summing_data = [column.FloatValues(j) for j in range(column.FloatValuesLength())]
 
         if grouping_data and summing_data:
@@ -140,7 +140,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     return result_df
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
-    dataframe = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
+    dataframe = DataFrame.GetRootAs(fb_buf, 0)
     num_elements = dataframe.Columns(0).IntValuesLength()  # Assuming all columns have same length
     element_size = 8  # Size of int64 or float64
 
@@ -152,9 +152,9 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
         dtype = metadata.Dtype()
 
         if col_name_fb == col_name:
-            if dtype == DataType.DataType.Int:
+            if dtype == DataType.Int:
                 start_offset = dataframe.Columns(i).IntValues(0).value  # Int values
-            elif dtype == DataType.DataType.Float:
+            elif dtype == DataType.Float:
                 start_offset = dataframe.Columns(i).FloatValues(0).value  # Float values
             else:
                 return  # Not a numeric column, do nothing
@@ -164,14 +164,14 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
 
     for i in range(num_elements):
         offset = start_offset + i * element_size
-        if dtype == DataType.DataType.Int:
+        if dtype == DataType.Int:
             original_value = int.from_bytes(fb_buf[offset:offset + element_size], 'little', signed=True)
-        elif dtype == DataType.DataType.Float:
+        elif dtype == DataType.Float:
             original_value = struct.unpack_from('<d', fb_buf, offset)[0]
 
         modified_value = map_func(original_value)
 
-        if dtype == DataType.DataType.Int:
+        if dtype == DataType.Int:
             fb_buf[offset:offset + element_size] = modified_value.to_bytes(element_size, 'little', signed=True)
-        elif dtype == DataType.DataType.Float:
+        elif dtype == DataType.Float:
             struct.pack_into('<d', fb_buf, offset, modified_value)
