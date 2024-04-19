@@ -189,18 +189,15 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
 
         if col_name_fb == col_name:
             dtype = metadata.Dtype()
-            if dtype in [DataFrame.DataType.Int, DataFrame.DataType.Float]:
-                num_elements = column.IntValuesLength() if dtype == DataFrame.DataType.Int else column.FloatValuesLength()
-                element_size = 8 if dtype == DataFrame.DataType.Int else 4
-
-                for j in range(num_elements):
-                    if dtype == DataFrame.DataType.Int:
-                        offset = column.IntValues(j)
-                        original_value = int.from_bytes(fb_buf[offset:offset + element_size], 'little', signed=True)
-                        modified_value = map_func(original_value)
-                        fb_buf[offset:offset + element_size] = modified_value.to_bytes(element_size, 'little', signed=True)
-                    elif dtype == DataFrame.DataType.Float:
-                        offset = column.FloatValues(j)
-                        original_value = struct.unpack_from('<f', fb_buf, offset)[0]
-                        modified_value = map_func(original_value)
-                        struct.pack_into('<f', fb_buf, offset, modified_value)
+            if dtype == DataFrame.DataType.Int:
+                for j in range(column.IntValuesLength()):
+                    value = column.IntValues(j)
+                    new_value = map_func(value)
+                    column.IntValues(j, new_value)
+            elif dtype == DataFrame.DataType.Float:
+                for j in range(column.FloatValuesLength()):
+                    value = column.FloatValues(j)
+                    new_value = map_func(value)
+                    column.FloatValues(j, new_value)
+            else:
+                raise ValueError("Column is not numeric")
