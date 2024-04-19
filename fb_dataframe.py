@@ -170,15 +170,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     return result_df
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
-    """
-    Apply map_func to elements in a numeric column in the Flatbuffer Dataframe in place.
-    This function shouldn't do anything if col_name doesn't exist or the specified
-    column is a string column.
 
-    @param fb_buf: buffer containing bytes of the Flatbuffer Dataframe.
-    @param col_name: name of the numeric column to apply map_func to.
-    @param map_func: function to apply to elements in the numeric column.
-    """
     dataframe = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
     num_columns = dataframe.ColumnsLength()
 
@@ -189,15 +181,13 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
 
         if col_name_fb == col_name:
             dtype = metadata.Dtype()
-            if dtype == DataFrame.DataType.Int:
-                for j in range(column.IntValuesLength()):
-                    value = column.IntValues(j)
+            if dtype == DataFrame.DataType.Int or dtype == DataFrame.DataType.Float:
+                for j in range(column.IntValuesLength() if dtype == DataFrame.DataType.Int else column.FloatValuesLength()):
+                    value = column.IntValues(j) if dtype == DataFrame.DataType.Int else column.FloatValues(j)
                     new_value = map_func(value)
-                    column.IntValues(j, new_value)
-            elif dtype == DataFrame.DataType.Float:
-                for j in range(column.FloatValuesLength()):
-                    value = column.FloatValues(j)
-                    new_value = map_func(value)
-                    column.FloatValues(j, new_value)
+                    if dtype == DataFrame.DataType.Int:
+                        column.IntValues(j, new_value)
+                    else:
+                        column.FloatValues(j, new_value)
             else:
                 raise ValueError("Column is not numeric")
