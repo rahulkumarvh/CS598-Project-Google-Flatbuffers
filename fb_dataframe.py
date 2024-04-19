@@ -84,7 +84,7 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     @param fb_bytes: bytes of the Flatbuffer DataFrame.
     @param rows: number of rows to return.
     """
-    df = CS598.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
+    df = DataFrame.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
     num_columns = df.ColumnsLength()
     data = {}
 
