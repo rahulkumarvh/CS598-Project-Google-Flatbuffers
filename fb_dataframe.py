@@ -76,26 +76,39 @@ def to_flatbuffer(df: pd.DataFrame) -> bytes:
     return builder.Output()
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
-    df = DataFrame.GetRootAs(fb_bytes, 0)
+    """
+        Returns the first n rows of the Flatbuffer DataFrame as a Pandas DataFrame
+        similar to df.head(). If there are less than n rows, return the entire Dataframe.
+        Hint: don't forget the column names!
+
+        @param fb_bytes: bytes of the Flatbuffer DataFrame.
+        @param rows: number of rows to return.
+    """
+    df = CS598.DataFrame.GetRootAs(fb_bytes, 0)
     num_columns = df.ColumnsLength()
     data = {}
 
+    # Extract data for each column
     for i in range(num_columns):
         column = df.Columns(i)
         metadata = column.Metadata()
         col_name = metadata.Name().decode()
-        
-        if metadata.Dtype() == DataType.DataType.Int:
-            values = [column.IntValues(j) for j in range(min(rows, column.IntValuesLength()))]
-        elif metadata.Dtype() == DataType.DataType.Float:
-            values = [column.FloatValues(j) for j in range(min(rows, column.FloatValuesLength()))]
-        elif metadata.Dtype() == DataType.DataType.String:
-            values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
-        else:
-            continue  # Skip unsupported column types
+        dtype = metadata.Dtype()
 
+        values = []
+
+        # Extract values based on data type
+        if dtype == CS598.DataType.Int:
+            values = [column.IntValues(j) for j in range(min(rows, column.IntValuesLength()))]
+        elif dtype == CS598.DataType.Float:
+            values = [column.FloatValues(j) for j in range(min(rows, column.FloatValuesLength()))]
+        elif dtype == CS598.DataType.String:
+            values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
+
+        # Add values to the data dictionary
         data[col_name] = values
 
+    # Construct and return a Pandas DataFrame
     return pd.DataFrame(data)
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
