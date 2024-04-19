@@ -77,14 +77,14 @@ def to_flatbuffer(df: pd.DataFrame) -> bytes:
 
 def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     """
-        Returns the first n rows of the Flatbuffer DataFrame as a Pandas DataFrame
-        similar to df.head(). If there are less than n rows, return the entire Dataframe.
-        Hint: don't forget the column names!
+    Returns the first n rows of the Flatbuffer DataFrame as a Pandas DataFrame
+    similar to df.head(). If there are less than n rows, return the entire Dataframe.
+    Hint: don't forget the column names!
 
-        @param fb_bytes: bytes of the Flatbuffer DataFrame.
-        @param rows: number of rows to return.
+    @param fb_bytes: bytes of the Flatbuffer DataFrame.
+    @param rows: number of rows to return.
     """
-    df = DataFrame.GetRootAs(fb_bytes, 0)
+    df = CS598.DataFrame.GetRootAsDataFrame(fb_bytes, 0)
     num_columns = df.ColumnsLength()
     data = {}
 
@@ -98,14 +98,12 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
         values = []
 
         # Extract values based on data type
-        if dtype == DataType.DataType.Int:
+        if dtype == CS598.DataType.Int:
             values = [column.IntValues(j) for j in range(min(rows, column.IntValuesLength()))]
-        elif dtype == DataType.DataType.Float:
+        elif dtype == CS598.DataType.Float:
             values = [column.FloatValues(j) for j in range(min(rows, column.FloatValuesLength()))]
-        elif dtype == DataType.DataType.String:
+        elif dtype == CS598.DataType.String:
             values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
-        else:
-            continue 
 
         # Add values to the data dictionary
         data[col_name] = values
