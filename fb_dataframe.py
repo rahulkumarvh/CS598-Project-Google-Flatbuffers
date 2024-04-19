@@ -26,7 +26,7 @@ def to_flatbuffer(df: pd.DataFrame) -> bytes:
 
         column_metadata_list.append((column_name, data_type))
 
-        # Convert column values to FlatBuffer values
+       
         column_values = df[column_name]
         value_vectors.append(column_values.tolist())
         value_vectors_dtype.append(dtype)
@@ -82,22 +82,22 @@ def to_flatbuffer(df: pd.DataFrame) -> bytes:
             Column.AddStringValues(builder, values)
             columns.append(Column.End(builder))
 
-    # Create a vector of Column objects
+   
     DataFrame.StartColumnsVector(builder, len(columns))
     for column in columns:
         builder.PrependUOffsetTRelative(column)
     columns_vector = builder.EndVector(len(columns))
     
 
-    # Create the DataFrame object
+  
     DataFrame.Start(builder)
     DataFrame.AddMetadata(builder, metadata_string)
     DataFrame.AddColumns(builder, columns_vector)
     df_data = DataFrame.End(builder)
 
-    # Finish building the FlatBuffer
+   
     builder.Finish(df_data)
-    # Get the bytes from the builder
+  
     return builder.Output()
 
 
@@ -119,11 +119,10 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
         elif metadata.Dtype() == DataType.DataType.String:
             values = [column.StringValues(j).decode() for j in range(min(rows, column.StringValuesLength()))]
         else:
-            continue  # Skip unsupported column types
-
+            continue 
         data[col_name] = values
 
-    # Construct and return a Pandas DataFrame
+   
     return pd.DataFrame(data)
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
@@ -131,7 +130,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     num_columns = df.ColumnsLength()
     data = {}
 
-    # Variables to hold column data for group by and sum operations
+    
     grouping_data = None
     summing_data = None
 
@@ -160,7 +159,7 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
     if grouping_data is None or summing_data is None:
         raise ValueError("Grouping column or summing column not found")
 
-    # Create a temporary DataFrame for performing the groupby sum
+
     temp_df = pd.DataFrame({
         grouping_col_name: grouping_data,
         sum_col_name: summing_data
@@ -171,10 +170,10 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
 
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
     dataf = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
-    num_elements = dataf.Columns(0).IntValuesLength()  # Get number of elements
+    num_elements = dataf.Columns(0).IntValuesLength()  
     ele_size = 8
 
-    # Determine offsets based on condition
+
     offsets = {472: (472, 608), 112: (112, 248)}
     start_offset_int, start_offset_float = offsets[472] if int.from_bytes(fb_buf[472:472 + ele_size], 'little') < 10 else offsets[112]
 
