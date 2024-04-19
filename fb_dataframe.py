@@ -2,10 +2,10 @@ import pandas as pd
 from typing import Callable, Any
 import flatbuffers
 
-import CSCS598.Dataframe
-import CSCS598.ColumnMetadata
-import CSCS598.Column
-import CSCS598.DataType
+import CS598.Dataframe
+import CS598.ColumnMetadata
+import CS598.Column
+import CS598.DataType
 
 def to_flatbuffer(df: pd.DataFrame) -> bytearray:
     """
