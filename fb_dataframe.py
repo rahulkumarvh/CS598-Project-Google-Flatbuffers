@@ -195,12 +195,12 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
             offset = start_offset_int + i * ele_size
             org_value = int.from_bytes(fb_buf[offset:offset + ele_size], 'little')
             print(org_value)
-            mod_value = map_func(org_value)
-            print(mod_value)
-            fb_buf[offset:offset + ele_size] = mod_value.to_bytes(ele_size, 'little', signed=True)
+            modified_value = map_func(org_value)
+            print(modified_value)
+            fb_buf[offset:offset + ele_size] = modified_value.to_bytes(ele_size, 'little', signed=True)
         elif col_name == 'float_col':
         
             offset = start_offset_float + i * ele_size
-            org_value = struct.unpack_from('<d', fb_buf, offset)[0]
-            mod_value = map_func(org_value)
-            struct.pack_into('<d', fb_buf, offset, mod_value)
+            original_value = struct.unpack_from('<d', fb_buf, offset)[0]
+            modified_value = map_func(original_value)
+            struct.pack_into('<d', fb_buf, offset, modified_value)
