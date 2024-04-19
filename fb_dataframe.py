@@ -43,12 +43,6 @@ def to_flatbuffer(df: pd.DataFrame) -> bytearray:
                 value_offsets.append(value_offset)
 
         # Create the values vector
-        if pd.api.types.is_string_dtype(series):
-            MP3.Dataframe.ColumnStartStringDataVector(builder, len(value_offsets))
-        elif pd.api.types.is_integer_dtype(series):
-            MP3.Dataframe.ColumnStartInt64DataVector(builder, len(value_offsets))
-        elif pd.api.types.is_float_dtype(series):
-            MP3.Dataframe.ColumnStartFloatDataVector(builder, len(value_offsets))
 
         for value_offset in reversed(value_offsets):
             builder.PrependUOffsetTRelative(value_offset)
