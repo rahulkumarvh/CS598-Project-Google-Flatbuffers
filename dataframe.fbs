@@ -1,26 +1,26 @@
-namespace Dataframe;
+namespace DataFrame;
 
-enum DataType: byte {
-  Int64 = 0,
-  Float = 1,
-  String = 2
+enum ValueType: byte { 
+    Int = 0, 
+    Float = 1, 
+    String = 2 
 }
 
-table ColumnMetadata {
-  name: string;  // Name of the column
-  dtype: DataType;  // Data type of the column
-}
-
-table Dataframe {
-  metadata: [ColumnMetadata]; // Metadata for all columns
-  columns: [Column]; // Columns data
+table Metadata {
+    name: string;
+    dtype: ValueType;
 }
 
 table Column {
-  dtype: DataType;
-  int64_data: [int64];
-  float_data: [float];
-  string_data: [string];
+    metadata: Metadata;
+    int_values: [int64]; // Values for int columns
+    float_values: [float]; // Values for float columns
+    string_values: [string]; // Values for string columns
 }
 
-root_type Dataframe;
+table DataFrame {
+    metadata: string; // Metadata for the dataframe
+    columns: [Column]; // List of columns
+}
+
+root_type DataFrame;
