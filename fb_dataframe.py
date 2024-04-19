@@ -4,6 +4,8 @@ from DataFrame import DataFrame
 from DataFrame import Column
 from DataFrame import Metadata
 from DataFrame import ValueType
+import types
+
 
 def to_flatbuffer(df: pd.DataFrame) -> bytes:
     """
