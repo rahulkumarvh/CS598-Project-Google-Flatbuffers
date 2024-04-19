@@ -172,21 +172,22 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
 def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func: types.FunctionType) -> None:
 
   dataf = DataFrame.DataFrame.GetRootAs(fb_buf, 0)
-  columns = dataf.Columns()
+  num_elements = dataf.Columns(0).IntValuesLength()  # Get number of elements
 
-  # Get column information based on name
-  if col_name == 'int_col':
-    offset = columns[0].IntValuesPos
-    data_type = int
-  elif col_name == 'float_col':
-    offset = columns[0].FloatValuesPos
-    data_type = float
-  else:
-    raise ValueError(f"Unsupported column name: {col_name}")
+  # Define offsets based on data type
+  column_types = {
+      "int_col": (472, int.from_bytes, int.to_bytes),
+      "float_col": (608, struct.unpack_from, struct.pack_into)
+  }
 
-  # Process each element
-  for i in range(columns[0].Size()):
-    element_offset = offset + i * data_type.bitwidth // 8
-    original_value = data_type.from_buffer(fb_buf, element_offset, byteorder='little')
+  # Validate column name and get corresponding functions
+  if col_name not in column_types:
+      raise ValueError(f"Unsupported column name: {col_name}")
+  start_offset, unpack_func, pack_func = column_types[col_name]
+
+  for i in range(num_elements):
+    offset = start_offset + i * 8  # Assuming element size is always 8 bytes
+    original_value = unpack_func(fb_buf, offset, '<') if col_name == 'float_col' else unpack_func(fb_buf[offset:offset + 8], 'little')
     modified_value = map_func(original_value)
-    modified_value.to_buffer(fb_buf, element_offset, byteorder='little')
+    pack_func(fb_buf, offset, modified_value, '<') if col_name == 'float_col' else pack_func(fb_buf[offset:offset + 8], modified_value, 'little', signed=True)
+    
