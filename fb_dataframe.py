@@ -127,11 +127,8 @@ def fb_dataframe_head(fb_bytes: bytes, rows: int = 5) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_name: str) -> pd.DataFrame:
-    df = DataFrame.DataFrame.GetRootAs(fb_bytes,0)
+    df = DataFrame.DataFrame.GetRootAs(fb_bytes, 0)
     num_columns = df.ColumnsLength()
-    data = {}
-
-    # Variables to hold column data for group by and sum operations
     grouping_data = None
     summing_data = None
 
@@ -153,9 +150,6 @@ def fb_dataframe_group_by_sum(fb_bytes: bytes, grouping_col_name: str, sum_col_n
                 summing_data = [column.IntValues(j) for j in range(column.IntValuesLength())]
             elif metadata.Dtype() == DataType.DataType.Float:
                 summing_data = [column.FloatValues(j) for j in range(column.FloatValuesLength())]
-
-        if grouping_data and summing_data:
-            break
 
     if grouping_data is None or summing_data is None:
         raise ValueError("Grouping column or summing column not found")
@@ -185,8 +179,6 @@ def fb_dataframe_map_numeric_column(fb_buf: memoryview, col_name: str, map_func:
                     value = column.IntValues(j) if dtype == DataType.DataType.Int else column.FloatValues(j)
                     new_value = map_func(value)
                     if dtype == DataType.DataType.Int:
-                        column.IntValues(j, new_value)
+                        column.SetIntValues(j, new_value)
                     else:
-                        column.FloatValues(j, new_value)
-            else:
-                raise ValueError("Column is not numeric")
+                        column.SetFloatValues(j, new_value)
